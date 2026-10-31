@@ -185,6 +185,8 @@ export interface Campaign {
   currentVersion: number;
   hasCreativeAsset?: boolean;
   assetFileName?: string;
+  assetFileUrl?: string;
+  creativeAnalysis?: CreativeAnalysisResult;
   auditLog: AuditLogEntry[];
   createdAt?: string;
   updatedAt: string;
@@ -216,4 +218,139 @@ export interface DashboardMetrics {
   activeRulesCount: number;
   totalEvidenceCount: number;
   recentAuditLogs: AuditLogEntry[];
+}
+
+// --- CREATIVE COMPLIANCE & IMAGE ANALYSIS TYPES ---
+
+export interface BoundingBox {
+  x0: number; // left px
+  y0: number; // top px
+  x1: number; // right px
+  y1: number; // bottom px
+  width: number;
+  height: number;
+}
+
+export interface OcrTextBlock {
+  id: string;
+  text: string;
+  confidence: number; // 0 - 100
+  bbox: BoundingBox;
+  lineIndex?: number;
+}
+
+export interface ExtractedColorSwatch {
+  hex: string;
+  rgb: [number, number, number];
+  percentage: number;
+  isApprovedBrandColor: boolean;
+  matchedBrandColor?: string;
+  colorDistanceDeltaE: number;
+}
+
+export interface ColorComplianceAnalysis {
+  status: 'Compliant' | 'Deviation Detected' | 'Unverified';
+  dominantColors: ExtractedColorSwatch[];
+  approvedPalette: { name: string; hex: string; role?: string }[];
+  unapprovedDominantColors: ExtractedColorSwatch[];
+  missingApprovedColors: { name: string; hex: string; role?: string }[];
+  details: string;
+  colorScore: number; // 0 - 100
+}
+
+export interface TextRegionContrast {
+  textSnippet: string;
+  bbox: BoundingBox;
+  textColorHex: string;
+  backgroundColorHex: string;
+  contrastRatio: number;
+  wcagAALarge: boolean;
+  wcagAANormal: boolean; // 4.5:1
+  wcagAAALarge: boolean;
+  wcagAAANormal: boolean; // 7.0:1
+  status: 'PASS' | 'FAIL' | 'ESTIMATE' | 'UNAVAILABLE';
+  isEstimate?: boolean;
+}
+
+export interface ContrastComplianceAnalysis {
+  passCount: number;
+  failCount: number;
+  overallRatioAverage: number;
+  regions: TextRegionContrast[];
+  wcagAARate: number;
+  details: string;
+  contrastScore: number;
+}
+
+export interface LayoutComplianceAnalysis {
+  imageDimensions: { width: number; height: number; aspectRatio: string };
+  overflowRisks: { textSnippet: string; bbox: BoundingBox; marginDistancePx: number; edge: string }[];
+  smallTextRisks: { textSnippet: string; bbox: BoundingBox; heightPx: number; warning: string }[];
+  densityCrowding: { textCoveragePercent: number; isCrowded: boolean; warning?: string };
+  layoutScore: number;
+  details: string;
+}
+
+export interface LogoComplianceAnalysis {
+  referenceLogoFound: boolean;
+  referenceLogoAsset?: string;
+  logoDetectedInImage: boolean;
+  confidence?: number;
+  status: 'Verified' | 'Not Detected' | 'Missing Reference Asset' | 'Potential Inconsistency';
+  details: string;
+}
+
+export interface GeminiCreativeInsights {
+  overallCreativeImpression: string;
+  visualConsistencyRating: 'High' | 'Medium' | 'Low';
+  contextualObservations: string[];
+  suggestedCreativeImprovements: string[];
+  disclaimerPlacementAssessment: string;
+  modelUsed: string;
+  isAiFallbackEngaged: boolean;
+}
+
+export interface CreativeFinding {
+  id: string;
+  type: 'textual' | 'visual' | 'contrast' | 'layout' | 'color' | 'logo';
+  detectedText?: string;
+  category: string;
+  severity: 'critical' | 'warning' | 'suggestion' | 'verified';
+  status: 'SUPPORTED' | 'UNSUPPORTED' | 'CONTRADICTED' | 'UNVERIFIED' | 'POLICY_VIOLATION';
+  explanation: string;
+  relatedGuideline?: string;
+  evidenceReference?: string;
+  suggestedCorrection?: string;
+  confidence: number;
+  bbox?: BoundingBox;
+}
+
+export interface CreativeAnalysisResult {
+  assetId: string;
+  assetFileName: string;
+  assetFileUrl: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  dimensions: { width: number; height: number };
+  extractedOcrText: string;
+  ocrConfidence: number;
+  textBlocks: OcrTextBlock[];
+  visualAnalysis: {
+    colorCompliance: ColorComplianceAnalysis;
+    contrastCompliance: ContrastComplianceAnalysis;
+    layoutCompliance: LayoutComplianceAnalysis;
+    logoCompliance: LogoComplianceAnalysis;
+  };
+  geminiInsights?: GeminiCreativeInsights;
+  findings: CreativeFinding[];
+  textualClaims: ExtractedClaim[];
+  scores: {
+    overallCreativeScore: number;
+    textualScore: number;
+    visualScore: number;
+    colorScore: number;
+    contrastScore: number;
+    layoutScore: number;
+  };
+  analyzedAt: string;
 }

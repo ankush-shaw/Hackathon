@@ -457,6 +457,366 @@
   ],
   "campaigns": [
     {
+      "id": "#BG-8953",
+      "campaignName": "Q4 Cloud Launch - Enterprise Tier",
+      "targetChannel": "LinkedIn Ad",
+      "headline": "Are cloud bottlenecks slowing your engineering sprint cycles?",
+      "content": "Boost your enterprise productivity by 10x guaranteed with Acme Cloud Platform. Voted #1 fastest cloud database in North America without downtime!",
+      "activePolicyVersion": "Acme Global 2025 v2.4",
+      "status": "Action Required",
+      "brandHealthScore": 62,
+      "findings": [
+        {
+          "id": "find-RULE-PROHIBITED-GUARANTEE-0",
+          "ruleId": "RULE-PROHIBITED-GUARANTEE",
+          "ruleCode": "Policy 4.2",
+          "category": "prohibited",
+          "categoryLabel": "Critical: Prohibited Absolute Guarantee",
+          "severity": "critical",
+          "originalClaim": "\"Boost your enterprise productivity by 10x guaranteed\"",
+          "matchedText": "Boost your enterprise productivity by 10x guaranteed",
+          "startIndex": 0,
+          "endIndex": 52,
+          "issue": "Guarantees of specific numerical multiples or financial returns are prohibited without an executed enterprise contract SLA.",
+          "clarificationNote": "Absolute performance or ROI guarantees without legal disclaimer and signed SLA are strictly prohibited under Acme Policy 4.2.",
+          "suggestedAlternative": "accelerate your enterprise productivity with high efficiency",
+          "actionLabel": "Replace with \"accelerate your enterprise productivity with high efficiency\"",
+          "status": "pending"
+        },
+        {
+          "id": "find-RULE-TRADEMARK-NOMENCLATURE-58",
+          "ruleId": "RULE-TRADEMARK-NOMENCLATURE",
+          "ruleCode": "Glossary v2.4",
+          "category": "trademark",
+          "categoryLabel": "Brand Voice • Trademark",
+          "severity": "suggestion",
+          "originalClaim": "\"Acme Cloud Platform\"",
+          "matchedText": "Acme Cloud Platform",
+          "startIndex": 58,
+          "endIndex": 77,
+          "issue": "Updated trademark nomenclature policy description.",
+          "clarificationNote": "Brand guidelines require using registered trademark \"Acme CloudSphere™\" on initial mention instead of generic \"Acme Cloud Platform\".",
+          "evidenceReference": "Global Brand Guidelines 2025, Section 3.2 Trademark Standards",
+          "suggestedAlternative": "Acme CloudSphere™",
+          "actionLabel": "Replace with \"Acme CloudSphere™\"",
+          "status": "pending"
+        },
+        {
+          "id": "find-RULE-SUPERLATIVE-FASTEST-79",
+          "ruleId": "RULE-SUPERLATIVE-FASTEST",
+          "ruleCode": "FTC COMPLIANCE",
+          "category": "evidence_required",
+          "categoryLabel": "Missing Evidence • Category: Comparative Market Claim",
+          "severity": "verified",
+          "originalClaim": "\"Voted #1 fastest cloud database in North America\"",
+          "matchedText": "Voted #1 fastest cloud database in North America",
+          "startIndex": 79,
+          "endIndex": 127,
+          "issue": "Superlative rankings such as \"#1 fastest\" or \"fastest on the market\" require an audited third-party benchmark or accredited analyst report citation before public distribution.",
+          "clarificationNote": "Missing evidence is not proof that this claim is false. However, regulatory (FTC) and brand policy requires an audited 3rd-party benchmark or analyst report citation before public distribution. Trust Principle: No evidence? Request human verification. Never fabricate proof.",
+          "evidenceReference": "Temporary Fact",
+          "suggestedAlternative": "Designed for fast performance based on verified enterprise benchmarks [Add Citation]",
+          "actionLabel": "Replace with \"Designed for fast performance based on verified enterprise benchmarks [Add Citation]\"",
+          "status": "pending"
+        },
+        {
+          "id": "find-RULE-TONE-DOWNTIME-128",
+          "ruleId": "RULE-TONE-DOWNTIME",
+          "ruleCode": "SLA Alignment",
+          "category": "tone_sla",
+          "categoryLabel": "Recommendation • Category: Tone & SLA Clarity",
+          "severity": "suggestion",
+          "originalClaim": "\"without downtime\"",
+          "matchedText": "without downtime",
+          "startIndex": 128,
+          "endIndex": 144,
+          "issue": "Replace colloquial claims of zero downtime with specific contractually defined availability tiers.",
+          "clarificationNote": "Recommended to state official 99.99% uptime SLA rather than colloquial \"without downtime\" to align with enterprise trust standards.",
+          "suggestedAlternative": "with enterprise-grade 99.99% uptime availability.",
+          "actionLabel": "Replace with \"with enterprise-grade 99.99% uptime availability.\"",
+          "status": "pending"
+        }
+      ],
+      "claims": [
+        {
+          "id": "claim-gemini-1793426612288-888",
+          "claimText": "Increases enterprise productivity by 10x",
+          "matchedText": "Boost your enterprise productivity by 10x",
+          "category": "performance",
+          "startIndex": 0,
+          "endIndex": 41,
+          "requiresEvidence": true,
+          "entities": [
+            "Enterprise",
+            "Productivity"
+          ],
+          "aiConfidence": 0.98,
+          "explanation": "Numerical multiplier claim regarding productivity gains requires empirical substantiation.",
+          "verification": {
+            "claimId": "claim-gemini-1793426612288-888",
+            "status": "UNSUPPORTED",
+            "explanation": "The claim 'Boost your enterprise productivity by 10x' is a numerical multiplier claim regarding productivity gains. A search of the approved evidence repository yields no documentation, benchmarks, or studies substantiating a 10x productivity increase.",
+            "missingInformation": "An empirical benchmark, productivity study, or verified enterprise case study documenting a 10x productivity boost.",
+            "verifiedAt": "2026-10-31T06:03:33.396Z"
+          }
+        },
+        {
+          "id": "claim-gemini-1793426612288-731",
+          "claimText": "Guaranteed performance improvement",
+          "matchedText": "guaranteed",
+          "category": "guarantee",
+          "startIndex": 42,
+          "endIndex": 52,
+          "requiresEvidence": true,
+          "entities": [
+            "Acme Cloud Platform"
+          ],
+          "aiConfidence": 0.95,
+          "explanation": "Explicit guarantee made about the product's performance results.",
+          "verification": {
+            "claimId": "claim-gemini-1793426612288-731",
+            "status": "SUPPORTED",
+            "matchedEvidenceId": "EVID-SLA-2025-V2",
+            "matchedEvidenceCode": "SLA-2025-V2",
+            "explanation": "The claim \"guaranteed\" in the context of product performance results/uptime is supported by Evidence #1, which details a verified 99.99% active-active uptime guarantee supported by zero scheduled downtime architecture.",
+            "supportingExcerpt": "Zero scheduled downtime architecture supported by 99.99% active-active uptime guarantee documented in SLA attachment.",
+            "verifiedAt": "2026-10-31T06:03:33.883Z"
+          }
+        },
+        {
+          "id": "claim-gemini-1793426612288-179",
+          "claimText": "Ranked number one fastest cloud database in North America",
+          "matchedText": "Voted #1 fastest cloud database in North America",
+          "category": "comparative",
+          "startIndex": 79,
+          "endIndex": 127,
+          "requiresEvidence": true,
+          "entities": [
+            "Cloud Database",
+            "North America"
+          ],
+          "aiConfidence": 0.99,
+          "explanation": "Superiority ranking and geographic superlative claim requiring third-party survey or benchmark proof.",
+          "verification": {
+            "claimId": "claim-gemini-1793426612288-179",
+            "status": "UNSUPPORTED",
+            "explanation": "The claim states that the product was voted '#1 fastest cloud database in North America'. Although Evidence #8 explicitly searched for this claim and found no third-party verified Gartner, Forrester, or IDC speed benchmark supporting a #1 fastest claim in North America, there is no verified evidence repository record confirming this ranking.",
+            "missingInformation": "Requires a verified third-party survey, benchmark, or independent analyst report (such as from Gartner, Forrester, or IDC) substantiating the #1 fastest database ranking in North America.",
+            "verifiedAt": "2026-10-31T06:03:34.699Z"
+          }
+        },
+        {
+          "id": "claim-gemini-1793426612288-968",
+          "claimText": "Operates without any downtime",
+          "matchedText": "without downtime",
+          "category": "performance",
+          "startIndex": 128,
+          "endIndex": 144,
+          "requiresEvidence": true,
+          "entities": [
+            "Uptime",
+            "Cloud Database"
+          ],
+          "aiConfidence": 0.97,
+          "explanation": "Absolute availability claim of 100% uptime requires technical substantiation.",
+          "verification": {
+            "claimId": "claim-gemini-1793426612288-968",
+            "status": "SUPPORTED",
+            "matchedEvidenceId": "EVID-SLA-2025-V2",
+            "matchedEvidenceCode": "SLA-2025-V2",
+            "explanation": "The claim 'without downtime' is substantiated by the Enterprise Master Service Agreement SLA v2.4, which guarantees a zero scheduled downtime architecture supported by a 99.99% active-active uptime guarantee.",
+            "supportingExcerpt": "Zero scheduled downtime architecture supported by 99.99% active-active uptime guarantee documented in SLA attachment.",
+            "verifiedAt": "2026-10-31T06:03:34.384Z"
+          }
+        }
+      ],
+      "versions": [
+        {
+          "version": 1,
+          "content": "Boost your enterprise productivity by 10x guaranteed with Acme Cloud Platform. Voted #1 fastest cloud database in North America without downtime!",
+          "timestamp": "11:33 am",
+          "score": 62,
+          "findings": [
+            {
+              "id": "find-RULE-PROHIBITED-GUARANTEE-0",
+              "ruleId": "RULE-PROHIBITED-GUARANTEE",
+              "ruleCode": "Policy 4.2",
+              "category": "prohibited",
+              "categoryLabel": "Critical: Prohibited Absolute Guarantee",
+              "severity": "critical",
+              "originalClaim": "\"Boost your enterprise productivity by 10x guaranteed\"",
+              "matchedText": "Boost your enterprise productivity by 10x guaranteed",
+              "startIndex": 0,
+              "endIndex": 52,
+              "issue": "Guarantees of specific numerical multiples or financial returns are prohibited without an executed enterprise contract SLA.",
+              "clarificationNote": "Absolute performance or ROI guarantees without legal disclaimer and signed SLA are strictly prohibited under Acme Policy 4.2.",
+              "suggestedAlternative": "accelerate your enterprise productivity with high efficiency",
+              "actionLabel": "Replace with \"accelerate your enterprise productivity with high efficiency\"",
+              "status": "pending"
+            },
+            {
+              "id": "find-RULE-TRADEMARK-NOMENCLATURE-58",
+              "ruleId": "RULE-TRADEMARK-NOMENCLATURE",
+              "ruleCode": "Glossary v2.4",
+              "category": "trademark",
+              "categoryLabel": "Brand Voice • Trademark",
+              "severity": "suggestion",
+              "originalClaim": "\"Acme Cloud Platform\"",
+              "matchedText": "Acme Cloud Platform",
+              "startIndex": 58,
+              "endIndex": 77,
+              "issue": "Updated trademark nomenclature policy description.",
+              "clarificationNote": "Brand guidelines require using registered trademark \"Acme CloudSphere™\" on initial mention instead of generic \"Acme Cloud Platform\".",
+              "evidenceReference": "Global Brand Guidelines 2025, Section 3.2 Trademark Standards",
+              "suggestedAlternative": "Acme CloudSphere™",
+              "actionLabel": "Replace with \"Acme CloudSphere™\"",
+              "status": "pending"
+            },
+            {
+              "id": "find-RULE-SUPERLATIVE-FASTEST-79",
+              "ruleId": "RULE-SUPERLATIVE-FASTEST",
+              "ruleCode": "FTC COMPLIANCE",
+              "category": "evidence_required",
+              "categoryLabel": "Missing Evidence • Category: Comparative Market Claim",
+              "severity": "verified",
+              "originalClaim": "\"Voted #1 fastest cloud database in North America\"",
+              "matchedText": "Voted #1 fastest cloud database in North America",
+              "startIndex": 79,
+              "endIndex": 127,
+              "issue": "Superlative rankings such as \"#1 fastest\" or \"fastest on the market\" require an audited third-party benchmark or accredited analyst report citation before public distribution.",
+              "clarificationNote": "Missing evidence is not proof that this claim is false. However, regulatory (FTC) and brand policy requires an audited 3rd-party benchmark or analyst report citation before public distribution. Trust Principle: No evidence? Request human verification. Never fabricate proof.",
+              "evidenceReference": "Temporary Fact",
+              "suggestedAlternative": "Designed for fast performance based on verified enterprise benchmarks [Add Citation]",
+              "actionLabel": "Replace with \"Designed for fast performance based on verified enterprise benchmarks [Add Citation]\"",
+              "status": "pending"
+            },
+            {
+              "id": "find-RULE-TONE-DOWNTIME-128",
+              "ruleId": "RULE-TONE-DOWNTIME",
+              "ruleCode": "SLA Alignment",
+              "category": "tone_sla",
+              "categoryLabel": "Recommendation • Category: Tone & SLA Clarity",
+              "severity": "suggestion",
+              "originalClaim": "\"without downtime\"",
+              "matchedText": "without downtime",
+              "startIndex": 128,
+              "endIndex": 144,
+              "issue": "Replace colloquial claims of zero downtime with specific contractually defined availability tiers.",
+              "clarificationNote": "Recommended to state official 99.99% uptime SLA rather than colloquial \"without downtime\" to align with enterprise trust standards.",
+              "suggestedAlternative": "with enterprise-grade 99.99% uptime availability.",
+              "actionLabel": "Replace with \"with enterprise-grade 99.99% uptime availability.\"",
+              "status": "pending"
+            }
+          ],
+          "claims": [
+            {
+              "id": "claim-gemini-1793426612288-888",
+              "claimText": "Increases enterprise productivity by 10x",
+              "matchedText": "Boost your enterprise productivity by 10x",
+              "category": "performance",
+              "startIndex": 0,
+              "endIndex": 41,
+              "requiresEvidence": true,
+              "entities": [
+                "Enterprise",
+                "Productivity"
+              ],
+              "aiConfidence": 0.98,
+              "explanation": "Numerical multiplier claim regarding productivity gains requires empirical substantiation.",
+              "verification": {
+                "claimId": "claim-gemini-1793426612288-888",
+                "status": "UNSUPPORTED",
+                "explanation": "The claim 'Boost your enterprise productivity by 10x' is a numerical multiplier claim regarding productivity gains. A search of the approved evidence repository yields no documentation, benchmarks, or studies substantiating a 10x productivity increase.",
+                "missingInformation": "An empirical benchmark, productivity study, or verified enterprise case study documenting a 10x productivity boost.",
+                "verifiedAt": "2026-10-31T06:03:33.396Z"
+              }
+            },
+            {
+              "id": "claim-gemini-1793426612288-731",
+              "claimText": "Guaranteed performance improvement",
+              "matchedText": "guaranteed",
+              "category": "guarantee",
+              "startIndex": 42,
+              "endIndex": 52,
+              "requiresEvidence": true,
+              "entities": [
+                "Acme Cloud Platform"
+              ],
+              "aiConfidence": 0.95,
+              "explanation": "Explicit guarantee made about the product's performance results.",
+              "verification": {
+                "claimId": "claim-gemini-1793426612288-731",
+                "status": "SUPPORTED",
+                "matchedEvidenceId": "EVID-SLA-2025-V2",
+                "matchedEvidenceCode": "SLA-2025-V2",
+                "explanation": "The claim \"guaranteed\" in the context of product performance results/uptime is supported by Evidence #1, which details a verified 99.99% active-active uptime guarantee supported by zero scheduled downtime architecture.",
+                "supportingExcerpt": "Zero scheduled downtime architecture supported by 99.99% active-active uptime guarantee documented in SLA attachment.",
+                "verifiedAt": "2026-10-31T06:03:33.883Z"
+              }
+            },
+            {
+              "id": "claim-gemini-1793426612288-179",
+              "claimText": "Ranked number one fastest cloud database in North America",
+              "matchedText": "Voted #1 fastest cloud database in North America",
+              "category": "comparative",
+              "startIndex": 79,
+              "endIndex": 127,
+              "requiresEvidence": true,
+              "entities": [
+                "Cloud Database",
+                "North America"
+              ],
+              "aiConfidence": 0.99,
+              "explanation": "Superiority ranking and geographic superlative claim requiring third-party survey or benchmark proof.",
+              "verification": {
+                "claimId": "claim-gemini-1793426612288-179",
+                "status": "UNSUPPORTED",
+                "explanation": "The claim states that the product was voted '#1 fastest cloud database in North America'. Although Evidence #8 explicitly searched for this claim and found no third-party verified Gartner, Forrester, or IDC speed benchmark supporting a #1 fastest claim in North America, there is no verified evidence repository record confirming this ranking.",
+                "missingInformation": "Requires a verified third-party survey, benchmark, or independent analyst report (such as from Gartner, Forrester, or IDC) substantiating the #1 fastest database ranking in North America.",
+                "verifiedAt": "2026-10-31T06:03:34.699Z"
+              }
+            },
+            {
+              "id": "claim-gemini-1793426612288-968",
+              "claimText": "Operates without any downtime",
+              "matchedText": "without downtime",
+              "category": "performance",
+              "startIndex": 128,
+              "endIndex": 144,
+              "requiresEvidence": true,
+              "entities": [
+                "Uptime",
+                "Cloud Database"
+              ],
+              "aiConfidence": 0.97,
+              "explanation": "Absolute availability claim of 100% uptime requires technical substantiation.",
+              "verification": {
+                "claimId": "claim-gemini-1793426612288-968",
+                "status": "SUPPORTED",
+                "matchedEvidenceId": "EVID-SLA-2025-V2",
+                "matchedEvidenceCode": "SLA-2025-V2",
+                "explanation": "The claim 'without downtime' is substantiated by the Enterprise Master Service Agreement SLA v2.4, which guarantees a zero scheduled downtime architecture supported by a 99.99% active-active uptime guarantee.",
+                "supportingExcerpt": "Zero scheduled downtime architecture supported by 99.99% active-active uptime guarantee documented in SLA attachment.",
+                "verifiedAt": "2026-10-31T06:03:34.384Z"
+              }
+            }
+          ]
+        }
+      ],
+      "currentVersion": 1,
+      "hasCreativeAsset": false,
+      "auditLog": [
+        {
+          "timestamp": "11:33 am",
+          "action": "Hybrid Scan Completed",
+          "user": "BrandGuard AI Engine",
+          "details": "1 Rule Violation, 0 Evidence Issues, 2 Tone/Brand Recommendations. Total Claims Extracted: 4."
+        }
+      ],
+      "createdAt": "Just now",
+      "updatedAt": "Just now"
+    },
+    {
       "id": "#BG-8952",
       "campaignName": "Q4 Cloud Launch - Enterprise Tier",
       "targetChannel": "LinkedIn Ad",
@@ -15197,6 +15557,13 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "log-1793426614732",
+      "timestamp": "11:33 am",
+      "action": "Campaign Created",
+      "user": "Author",
+      "details": "Created campaign #BG-8953 (Q4 Cloud Launch - Enterprise Tier)"
+    },
     {
       "id": "log-1793379368923",
       "timestamp": "10:26 pm",

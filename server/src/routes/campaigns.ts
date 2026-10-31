@@ -45,7 +45,7 @@ campaignRouter.get('/:id', (req, res) => {
 // 4. Create new campaign
 campaignRouter.post('/', async (req, res, next) => {
   try {
-    const { content, channel, campaignName, headline, assetFileName } = req.body;
+    const { content, channel, campaignName, headline, assetFileName, assetFileUrl, creativeAnalysis } = req.body;
     if (!content || !campaignName) {
       return res.status(400).json({ error: 'content and campaignName are required' });
     }
@@ -80,8 +80,10 @@ campaignRouter.post('/', async (req, res, next) => {
       claims: scanResult.claims,
       versions: [initialRevision],
       currentVersion: 1,
-      hasCreativeAsset: !!assetFileName,
+      hasCreativeAsset: !!(assetFileName || assetFileUrl || creativeAnalysis),
       assetFileName,
+      assetFileUrl,
+      creativeAnalysis,
       auditLog: [
         {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

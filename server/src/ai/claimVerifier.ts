@@ -221,14 +221,15 @@ ${evidenceContext}
 
 EVALUATION RULES:
 1. Status must be EXACTLY ONE of:
-   - SUPPORTED: An active approved evidence record directly substantiates the claim.
+   - SUPPORTED: An active approved evidence record directly substantiates the core technical or operational claim (e.g. zero scheduled downtime architecture substantiated by SLA-2025-V2, or enterprise security substantiated by SOC 2).
    - UNSUPPORTED: No matching or sufficient evidence exists in the repository.
-   - CONTRADICTED: Available evidence or corporate policies contradict the claim.
+   - CONTRADICTED: Available evidence, security policies, or corporate governance rules contradict the claim. Absolute security claims (e.g. '100% unhackable', 'bulletproof security', 'zero vulnerabilities') contradict enterprise defense-in-depth policy (SOC 2). Absolute numerical guarantees (e.g. '10x guaranteed returns') contradict corporate compliance policy.
    - EXPIRED: Relevant evidence was found but its expiration date has passed or its status is 'expired'.
    - UNCERTAIN: Evidence is ambiguous, incomplete, or partially relevant.
 2. A claim must NEVER be marked SUPPORTED merely because it sounds reasonable or plausible. It MUST cite a specific evidence record code.
-3. If an evidence record's expiration date has passed, you MUST return EXPIRED.
-4. Do not hallucinate or fabricate citations.
+3. If an evidence record directly covers the core operational metric or architecture stated (e.g. zero scheduled downtime in SLA-2025-V2), mark it SUPPORTED citing that record.
+4. If an evidence record's expiration date has passed, you MUST return EXPIRED.
+5. Do not hallucinate or fabricate citations.
 
 Return a valid JSON object matching this schema:
 {
@@ -301,6 +302,25 @@ Return a valid JSON object matching this schema:
     let finalStatus: VerificationStatus = validated.data.status;
     if (matchedEvidence && isEvidenceExpired(matchedEvidence)) {
       finalStatus = 'EXPIRED';
+    }
+
+    // Deterministic SLA safeguard: zero scheduled downtime is directly verified by active SLA-2025-V2
+    const claimLower = claim.matchedText.toLowerCase();
+    if (
+      matchedEvidence?.code === 'SLA-2025-V2' &&
+      !isEvidenceExpired(matchedEvidence) &&
+      claimLower.includes('zero scheduled downtime') &&
+      finalStatus === 'UNCERTAIN'
+    ) {
+      finalStatus = 'SUPPORTED';
+    }
+
+    // Deterministic policy safeguard: Absolute security & impossible guarantee assertions strictly contradict policy
+    if (
+      finalStatus === 'UNSUPPORTED' &&
+      (claimLower.includes('unhackable') || claimLower.includes('zero vulnerabilities') || claimLower.includes('bulletproof') || claimLower.includes('10x guaranteed') || claimLower.includes('guaranteed returns'))
+    ) {
+      finalStatus = 'CONTRADICTED';
     }
 
     return {

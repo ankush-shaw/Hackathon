@@ -8,6 +8,7 @@ import { ExportReportModal } from '../components/review/ExportReportModal';
 import { AttachEvidenceModal } from '../components/review/AttachEvidenceModal';
 import { OverrideModal } from '../components/review/OverrideModal';
 import { ShareWithLegalModal } from '../components/review/ShareWithLegalModal';
+import { CreativeComplianceReportView } from '../components/creative/CreativeComplianceReportView';
 import { apiClient } from '../api/client';
 import { applySuggestionToText, applyAllSuggestionsToText } from '../engine/complianceEngine';
 import { 
@@ -20,7 +21,8 @@ import {
   History,
   Sparkles,
   Info,
-  TrendingUp
+  TrendingUp,
+  Image as ImageIcon
 } from 'lucide-react';
 
 interface AnalysisResultsPageProps {
@@ -43,7 +45,7 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
   const [selectedFindingId, setSelectedFindingId] = useState<string | undefined>(
     review.findings[0]?.id
   );
-  const [activeTab, setActiveTab] = useState<'findings' | 'claims' | 'drift'>('findings');
+  const [activeTab, setActiveTab] = useState<'findings' | 'claims' | 'drift' | 'creative'>('findings');
   const [isEditingDraft, setIsEditingDraft] = useState(false);
   const [draftContent, setDraftContent] = useState(review.content);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -374,6 +376,37 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
           </span>
         </div>
 
+        {/* Creative Asset Compliance Banner if present */}
+        {review.creativeAnalysis && (
+          <div style={{
+            background: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            borderRadius: 'var(--radius-sm)',
+            padding: '10px 14px',
+            fontSize: 12.5,
+            color: '#1e40af',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            marginBottom: 16
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ImageIcon size={16} />
+              <span>
+                <strong>Creative Asset Attached:</strong> {review.assetFileName || 'Marketing Banner'} • {review.creativeAnalysis.dimensions.width}×{review.creativeAnalysis.dimensions.height}px (Creative Score: <strong>{review.creativeAnalysis.scores.overallCreativeScore}/100</strong>)
+              </span>
+            </div>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => setActiveTab('creative')}
+              style={{ fontSize: 11, padding: '4px 10px' }}
+            >
+              Inspect Visual Canvas & OCR →
+            </button>
+          </div>
+        )}
+
         {/* Score & Category Breakdown */}
         <ScoreMeter
           score={review.brandHealthScore}
@@ -546,7 +579,7 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
         {/* Right Column: Identified Findings & Extracted Claims */}
         <div>
           {/* Navigation Tabs */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, borderBottom: '1px solid var(--border-color)', paddingBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, borderBottom: '1px solid var(--border-color)', paddingBottom: 8, flexWrap: 'wrap' }}>
             <button
               className={`filter-tab ${activeTab === 'findings' ? 'active' : ''}`}
               onClick={() => setActiveTab('findings')}
@@ -559,9 +592,21 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
             >
               Extracted Claims ({review.claims?.length || 0})
             </button>
+            {review.creativeAnalysis && (
+              <button
+                className={`filter-tab ${activeTab === 'creative' ? 'active' : ''}`}
+                onClick={() => setActiveTab('creative')}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <ImageIcon size={13} style={{ color: 'var(--primary)' }} />
+                <span>Creative Compliance ({review.creativeAnalysis.findings.length})</span>
+              </button>
+            )}
           </div>
 
-          {activeTab === 'findings' ? (
+          {activeTab === 'creative' && review.creativeAnalysis ? (
+            <CreativeComplianceReportView report={review.creativeAnalysis} />
+          ) : activeTab === 'findings' ? (
             <div className="finding-cards-list">
               {review.findings.length === 0 ? (
                 <div style={{ 

@@ -5,7 +5,8 @@ import type {
   ComplianceScanResult,
   DashboardMetrics,
   BrandAsset,
-  GuidelineVersion
+  GuidelineVersion,
+  CreativeAnalysisResult
 } from '../types';
 import { StorageService } from '../storage/localStorage';
 import { runComplianceScan } from '../engine/complianceEngine';
@@ -189,6 +190,8 @@ export const apiClient = {
     headline?: string;
     content: string;
     assetFileName?: string;
+    assetFileUrl?: string;
+    creativeAnalysis?: CreativeAnalysisResult;
   }): Promise<ReviewRecord> {
     const remote = await safeFetch<ReviewRecord>('/api/campaigns', {
       method: 'POST',
@@ -224,8 +227,10 @@ export const apiClient = {
       currentVersion: 1,
       createdAt: 'Just now',
       updatedAt: 'Just now',
-      hasCreativeAsset: !!data.assetFileName,
+      hasCreativeAsset: !!(data.assetFileName || data.assetFileUrl || data.creativeAnalysis),
       assetFileName: data.assetFileName,
+      assetFileUrl: data.assetFileUrl,
+      creativeAnalysis: data.creativeAnalysis,
       auditLog: [
         {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -293,6 +298,41 @@ export const apiClient = {
       method: 'POST',
       body: JSON.stringify(params)
     });
+  },
+
+  // Real Image-Based Creative Compliance Analysis (Multipart upload)
+  async uploadAndAnalyzeCreative(file: File, channel: string = 'Banner Ad'): Promise<CreativeAnalysisResult> {
+    const formData = new FormData();
+    formData.append('creative', file);
+    formData.append('channel', channel);
+
+    const userSession = StorageService.getUserSession();
+    const authHeaders: Record<string, string> = {};
+    if (userSession) {
+      authHeaders['X-User-Email'] = userSession.email || '';
+      authHeaders['X-User-Role'] = userSession.role || '';
+      authHeaders['X-User-Name'] = userSession.name || '';
+      authHeaders['X-User-Company'] = userSession.company || '';
+      try {
+        const token = btoa(unescape(encodeURIComponent(JSON.stringify(userSession))));
+        authHeaders['Authorization'] = `Bearer ${token}`;
+      } catch {
+        // Fallback
+      }
+    }
+
+    const res = await fetch(`${API_BASE}/api/assets/analyze-creative`, {
+      method: 'POST',
+      headers: authHeaders, // Note: browser automatically sets Content-Type to multipart/form-data with boundary
+      body: formData
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || `Upload analysis failed with status ${res.status}`);
+    }
+
+    return (await res.json()) as CreativeAnalysisResult;
   },
 
   // --- REAL DASHBOARD METRICS ---

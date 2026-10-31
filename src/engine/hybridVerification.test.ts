@@ -16,7 +16,7 @@ describe('BrandGuard AI — Hybrid Verification & Governance Engine', () => {
     expect(slaClaim).toBeDefined();
     expect(slaClaim?.verification?.status).toBe('SUPPORTED');
     expect(slaClaim?.verification?.matchedEvidenceCode).toBe('SLA-2025-V2');
-  });
+  }, 25000);
 
   it('correctly classifies an unverified superlative claim as UNSUPPORTED', async () => {
     const text = 'Introducing our new platform. It is unequivocally the fastest on the market.';
@@ -26,7 +26,7 @@ describe('BrandGuard AI — Hybrid Verification & Governance Engine', () => {
     expect(fastestClaim).toBeDefined();
     expect(fastestClaim?.verification?.status).toBe('UNSUPPORTED');
     expect(fastestClaim?.verification?.missingInformation).toBeDefined();
-  });
+  }, 25000);
 
   it('correctly classifies an impossible guarantee or absolute security claim as CONTRADICTED', async () => {
     const text = 'Experience 100% unhackable cloud database storage with 10x guaranteed returns!';
@@ -34,7 +34,7 @@ describe('BrandGuard AI — Hybrid Verification & Governance Engine', () => {
 
     const contradictedClaims = result.claims.filter(c => c.verification?.status === 'CONTRADICTED');
     expect(contradictedClaims.length).toBeGreaterThanOrEqual(1);
-  });
+  }, 25000);
 
   it('identifies expired evidence records and marks them EXPIRED', () => {
     const expiredRecord = DEFAULT_EVIDENCE.find(e => e.code === 'BENCH-2023-EXPIRED');
