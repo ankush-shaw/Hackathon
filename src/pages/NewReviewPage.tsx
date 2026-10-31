@@ -24,7 +24,7 @@ interface NewReviewPageProps {
 export const NewReviewPage: React.FC<NewReviewPageProps> = ({
   onScanComplete,
 }) => {
-  const [activeTab, setActiveTab] = useState<'text' | 'image'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'image' | 'both'>('both');
   const [campaignName, setCampaignName] = useState('');
   const [targetChannel, setTargetChannel] = useState('LinkedIn Ad');
   const [headline, setHeadline] = useState('');
@@ -161,8 +161,8 @@ export const NewReviewPage: React.FC<NewReviewPageProps> = ({
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 16, borderBottom: '1px solid var(--border-color)', marginBottom: 24 }}>
+      {/* 3 Review Mode Tabs */}
+      <div style={{ display: 'flex', gap: 12, borderBottom: '1px solid var(--border-color)', marginBottom: 24, flexWrap: 'wrap' }}>
         <button
           className={`filter-tab ${activeTab === 'text' ? 'active' : ''}`}
           style={{ 
@@ -194,7 +194,24 @@ export const NewReviewPage: React.FC<NewReviewPageProps> = ({
           onClick={() => setActiveTab('image')}
         >
           <ImageIcon size={16} />
-          <span>Creative Asset & Accessibility</span>
+          <span>Creative Asset Inspection</span>
+        </button>
+
+        <button
+          className={`filter-tab ${activeTab === 'both' ? 'active' : ''}`}
+          style={{ 
+            padding: '10px 18px', 
+            borderBottom: activeTab === 'both' ? '2px solid var(--primary)' : 'none',
+            borderRadius: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            color: activeTab === 'both' ? 'var(--primary)' : 'var(--text-sub)'
+          }}
+          onClick={() => setActiveTab('both')}
+        >
+          <Layers size={16} />
+          <span>Unified Review (Both)</span>
         </button>
       </div>
 
@@ -218,8 +235,12 @@ export const NewReviewPage: React.FC<NewReviewPageProps> = ({
       )}
 
       {/* Form Layout */}
-      <div className="review-form-layout">
+      <div 
+        className={activeTab === 'both' ? 'review-form-layout' : undefined}
+        style={activeTab !== 'both' ? { maxWidth: 900, margin: '0 auto', width: '100%' } : undefined}
+      >
         {/* Left Column: Form Details */}
+        {(activeTab === 'text' || activeTab === 'both') && (
         <div className="review-form-card">
           {/* Quick Test Templates */}
           <div style={{ 
@@ -365,8 +386,10 @@ export const NewReviewPage: React.FC<NewReviewPageProps> = ({
             </button>
           </div>
         </div>
+        )}
 
         {/* Right Column: Creative Asset & Inspection */}
+        {(activeTab === 'image' || activeTab === 'both') && (
         <div className="review-form-card" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="form-label-row" style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -578,6 +601,7 @@ export const NewReviewPage: React.FC<NewReviewPageProps> = ({
             🛡️ Inspects pixel palettes, WCAG relative luminance contrast, text bounding boxes, and claims.
           </div>
         </div>
+        )}
       </div>
 
       {/* Full-Screen Creative Compliance Report Modal */}

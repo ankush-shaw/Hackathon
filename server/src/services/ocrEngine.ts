@@ -86,3 +86,4 @@ export async function performOcrAnalysis(imageBuffer: Buffer): Promise<OcrExtrac
     };
   }
 }
+

@@ -445,3 +445,4 @@ export function inspectLogoCompliance(
       : `Approved logo "${registeredLogo.assetName}" was not distinctly recognized in the creative canvas.`
   };
 }
+
