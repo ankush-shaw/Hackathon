@@ -25,12 +25,10 @@ export const NewReviewPage: React.FC<NewReviewPageProps> = ({
   onScanComplete,
 }) => {
   const [activeTab, setActiveTab] = useState<'text' | 'image'>('text');
-  const [campaignName, setCampaignName] = useState('Q4 Cloud Launch - Enterprise Tier');
+  const [campaignName, setCampaignName] = useState('');
   const [targetChannel, setTargetChannel] = useState('LinkedIn Ad');
-  const [headline, setHeadline] = useState('Are cloud bottlenecks slowing your engineering sprint cycles?');
-  const [copyText, setCopyText] = useState(
-    'Boost your enterprise productivity by 10x guaranteed with Acme Cloud Platform. Voted #1 fastest cloud database in North America without downtime!'
-  );
+  const [headline, setHeadline] = useState('');
+  const [copyText, setCopyText] = useState('');
   const [uploadedFile, setUploadedFile] = useState<{ name: string; size: string; raw?: File } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [creativeAnalysis, setCreativeAnalysis] = useState<CreativeAnalysisResult | null>(null);
