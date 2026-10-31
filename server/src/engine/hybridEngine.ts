@@ -8,7 +8,7 @@ import type {
 } from '../types/index.js';
 import { runDeterministicChecks } from './deterministicRules.js';
 import { extractClaims } from '../ai/claimExtractor.js';
-import { verifyClaim } from '../ai/claimVerifier.js';
+import { verifyClaim, generateCompliantAlternative } from '../ai/claimVerifier.js';
 
 export interface HybridScanResult {
   score: number;
@@ -123,11 +123,13 @@ export async function runHybridComplianceScan(
         issue: verification.explanation,
         clarificationNote: verification.missingInformation || verification.explanation,
         evidenceReference: verification.matchedEvidenceCode ? `Referenced: ${verification.matchedEvidenceCode}` : undefined,
-        suggestedAlternative: verification.matchedEvidenceCode 
-          ? `${claim.matchedText} [Ref: ${verification.matchedEvidenceCode}]`
-          : claim.matchedText.toLowerCase().includes('uptime') || claim.matchedText.toLowerCase().includes('99.99%')
-          ? `${claim.matchedText} (under SLA terms [Ref: SLA-2025-V2])`
-          : `verified ${claim.matchedText} [Audited Benchmark Required]`,
+        suggestedAlternative: verification.suggestedAlternative || (
+          verification.matchedEvidenceCode 
+            ? `${claim.matchedText} [Ref: ${verification.matchedEvidenceCode}]`
+            : claim.matchedText.toLowerCase().includes('uptime') || claim.matchedText.toLowerCase().includes('99.99%')
+            ? `${claim.matchedText} (under SLA terms [Ref: SLA-2025-V2])`
+            : generateCompliantAlternative(claim.matchedText, claim.category)
+        ),
         status: 'pending'
       });
     }

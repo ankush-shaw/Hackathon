@@ -87,6 +87,7 @@ export interface ClaimVerification {
   explanation: string;
   supportingExcerpt?: string;
   missingInformation?: string;
+  suggestedAlternative?: string | null;
   verifiedAt: string;
 }
 

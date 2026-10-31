@@ -92,6 +92,13 @@ export function applySuggestionToText(originalText: string, finding: Finding): s
     return originalText;
   }
 
+  // Check if the matchedText is wrapped in previous redundant placeholders like "verified ... [Audited Benchmark Required]"
+  const cleanMatched = finding.matchedText.trim();
+  const redundantPattern = new RegExp('(?:verified\\s+)+' + cleanMatched.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&') + '(?:\\s*\\[Audited Benchmark Required\\])+', 'gi');
+  if (redundantPattern.test(originalText)) {
+    return originalText.replace(redundantPattern, finding.suggestedAlternative);
+  }
+
   const start = finding.startIndex;
   const end = finding.endIndex;
 
