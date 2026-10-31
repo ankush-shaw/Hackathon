@@ -43,7 +43,13 @@ export const NewReviewPage: React.FC<NewReviewPageProps> = ({
   const chars = copyText.length;
 
   const handleClear = () => {
+    setCampaignName('');
+    setHeadline('');
     setCopyText('');
+    setUploadedFile(null);
+    setPreviewUrl(null);
+    setCreativeAnalysis(null);
+    setErrorMsg('');
   };
 
   const handleLoadSample = (type: 'flagged' | 'clean' | 'long' | 'slide') => {
@@ -211,7 +217,7 @@ export const NewReviewPage: React.FC<NewReviewPageProps> = ({
           onClick={() => setActiveTab('both')}
         >
           <Layers size={16} />
-          <span>Unified Review (Both)</span>
+          <span>Full Campaign Review (Text + Image)</span>
         </button>
       </div>
 
@@ -365,9 +371,10 @@ export const NewReviewPage: React.FC<NewReviewPageProps> = ({
                 className="btn btn-ghost btn-sm"
                 onClick={handleClear}
                 style={{ fontSize: 11.5 }}
+                title="Clear all fields and assets"
               >
                 <RotateCcw size={12} />
-                <span>Clear</span>
+                <span>Clear All</span>
               </button>
             </div>
           </div>
