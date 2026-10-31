@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { ReviewRecord, Finding, EvidenceRecord, BrandRule } from '../types';
+import type { ReviewRecord, Finding, EvidenceRecord, BrandRule, UserProfile } from '../types';
 import { ScoreMeter } from '../components/review/ScoreMeter';
 import { EvaluatedCopySnippet } from '../components/review/EvaluatedCopySnippet';
 import { FindingCard } from '../components/review/FindingCard';
@@ -8,12 +8,8 @@ import { ExportReportModal } from '../components/review/ExportReportModal';
 import { AttachEvidenceModal } from '../components/review/AttachEvidenceModal';
 import { OverrideModal } from '../components/review/OverrideModal';
 import { ShareWithLegalModal } from '../components/review/ShareWithLegalModal';
-import { 
-  runComplianceScan, 
-  applySuggestionToText, 
-  applyAllSuggestionsToText 
-} from '../engine/complianceEngine';
-import { StorageService } from '../storage/localStorage';
+import { apiClient } from '../api/client';
+import { applySuggestionToText, applyAllSuggestionsToText } from '../engine/complianceEngine';
 import { 
   FileText, 
   Share2, 
@@ -23,7 +19,8 @@ import {
   Edit3, 
   History,
   Sparkles,
-  Info
+  Info,
+  TrendingUp
 } from 'lucide-react';
 
 interface AnalysisResultsPageProps {
@@ -32,18 +29,21 @@ interface AnalysisResultsPageProps {
   evidenceList: EvidenceRecord[];
   onReviewUpdated: (updatedReview: ReviewRecord) => void;
   onNavigateHistory: () => void;
+  currentUser?: UserProfile | null;
 }
 
 export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
   review,
-  rules,
+  rules: _rules,
   evidenceList,
+  currentUser,
   onReviewUpdated,
   onNavigateHistory,
 }) => {
   const [selectedFindingId, setSelectedFindingId] = useState<string | undefined>(
     review.findings[0]?.id
   );
+  const [activeTab, setActiveTab] = useState<'findings' | 'claims' | 'drift'>('findings');
   const [isEditingDraft, setIsEditingDraft] = useState(false);
   const [draftContent, setDraftContent] = useState(review.content);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -51,6 +51,18 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
   const [targetEvidenceFinding, setTargetEvidenceFinding] = useState<Finding | null>(null);
   const [targetOverrideFinding, setTargetOverrideFinding] = useState<Finding | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isRescanning, setIsRescanning] = useState(false);
+
+  const [prevReviewId, setPrevReviewId] = useState(review.id);
+  const [prevContent, setPrevContent] = useState(review.content);
+
+  // Sync draftContent whenever active review or its content changes
+  if (review.id !== prevReviewId || review.content !== prevContent) {
+    setPrevReviewId(review.id);
+    setPrevContent(review.content);
+    setDraftContent(review.content);
+    setSelectedFindingId(review.findings[0]?.id);
+  }
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -63,209 +75,119 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
   const suggestionCount = review.findings.filter(f => (f.category === 'trademark' || f.category === 'tone_sla') && f.severity !== 'verified' && f.status !== 'applied').length;
   const verifiedCount = review.findings.filter(f => f.severity === 'verified').length;
 
+  const currentDiff = review.versions[review.versions.length - 1]?.diff;
+
   /**
-   * Re-scan the current content or modified draft against active rules & evidence
+   * Re-scan the current content or modified draft against backend engine
    */
-  const handleRescan = (contentToScan = draftContent) => {
-    const scanResult = runComplianceScan(contentToScan, review.targetChannel, rules, evidenceList);
-    const newVersionNum = review.currentVersion + 1;
-
-    const newVersion = {
-      version: newVersionNum,
-      content: contentToScan,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      score: scanResult.score,
-      findings: scanResult.findings,
-    };
-
-    const updatedReview: ReviewRecord = {
-      ...review,
-      content: contentToScan,
-      brandHealthScore: scanResult.score,
-      status: scanResult.status,
-      findings: scanResult.findings,
-      versions: [...review.versions, newVersion],
-      currentVersion: newVersionNum,
-      updatedAt: 'Just now',
-      auditLog: [
-        {
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: `Revision v${newVersionNum} Rescanned`,
-          user: 'AI Engine v4.6.1',
-          details: `Re-scan score: ${scanResult.score}/100. ${scanResult.summaryText}`,
-        },
-        ...review.auditLog,
-      ],
-    };
-
-    StorageService.saveReview(updatedReview);
-    onReviewUpdated(updatedReview);
-    setIsEditingDraft(false);
-    showToast(`Re-scan completed! New Brand Health Score: ${scanResult.score}/100`);
+  const handleRescan = async (contentToScan = draftContent) => {
+    setIsRescanning(true);
+    try {
+      const updated = await apiClient.rescanCampaign(review.id, contentToScan);
+      if (updated) {
+        onReviewUpdated(updated);
+        setIsEditingDraft(false);
+        showToast(`Re-scan completed! Score: ${updated.brandHealthScore}/100`);
+      }
+    } catch (err: any) {
+      showToast(`Re-scan failed: ${err.message}`);
+    } finally {
+      setIsRescanning(false);
+    }
   };
 
   /**
    * Apply a suggested correction to text and auto-rescan
    */
-  const handleApplySuggestion = (finding: Finding) => {
-    const updatedContent = applySuggestionToText(draftContent, finding);
+  const handleApplySuggestion = async (finding: Finding) => {
+    const baseText = draftContent || review.content;
+    const updatedContent = applySuggestionToText(baseText, finding);
     setDraftContent(updatedContent);
-
-    // Update finding state to 'applied'
-    const updatedFindings = review.findings.map(f => 
-      f.id === finding.id ? { ...f, status: 'applied' as const } : f
-    );
-
-    const updatedReview: ReviewRecord = {
-      ...review,
-      content: updatedContent,
-      findings: updatedFindings,
-      auditLog: [
-        {
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'Applied Suggested Replacement',
-          user: 'Sarah M.',
-          details: `Replaced "${finding.matchedText}" with "${finding.suggestedAlternative}"`,
-        },
-        ...review.auditLog,
-      ],
-    };
-
-    StorageService.saveReview(updatedReview);
-    onReviewUpdated(updatedReview);
     showToast(`Applied fix for "${finding.matchedText}". Rescanning...`);
-
-    // Auto-rescan to update score cleanly
-    setTimeout(() => {
-      handleRescan(updatedContent);
-    }, 250);
+    await handleRescan(updatedContent);
   };
 
   /**
    * Apply all suggestions in batch
    */
-  const handleApplyAllSuggestions = () => {
-    const updatedContent = applyAllSuggestionsToText(draftContent, review.findings);
+  const handleApplyAllSuggestions = async () => {
+    const baseText = draftContent || review.content;
+    const updatedContent = applyAllSuggestionsToText(baseText, review.findings);
     setDraftContent(updatedContent);
     showToast('Applied all suggestions! Rescanning...');
-    setTimeout(() => {
-      handleRescan(updatedContent);
-    }, 250);
+    await handleRescan(updatedContent);
   };
 
-  /**
-   * Copy text helper
-   */
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     showToast('Copied to clipboard!');
   };
 
-  /**
-   * Mark single finding as reviewed
-   */
   const handleMarkReviewed = (findingId: string) => {
     const updatedFindings = review.findings.map(f =>
       f.id === findingId ? { ...f, status: 'reviewed' as const } : f
     );
-
-    const updatedReview: ReviewRecord = {
+    const updated: ReviewRecord = {
       ...review,
       findings: updatedFindings,
       auditLog: [
         {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           action: 'Finding Marked Reviewed',
-          user: 'Sarah M.',
-          details: `Marked finding ${findingId} as human reviewed.`,
+          user: 'Reviewer',
+          details: `Marked finding ${findingId} as human reviewed.`
         },
-        ...review.auditLog,
-      ],
+        ...review.auditLog
+      ]
     };
-
-    StorageService.saveReview(updatedReview);
-    onReviewUpdated(updatedReview);
+    onReviewUpdated(updated);
     showToast('Marked finding as reviewed.');
   };
 
-  /**
-   * Mark all findings as reviewed
-   */
   const handleMarkAllReviewed = () => {
     const updatedFindings = review.findings.map(f => ({
       ...f,
-      status: 'reviewed' as const,
+      status: 'reviewed' as const
     }));
-
-    const updatedReview: ReviewRecord = {
+    const updated: ReviewRecord = {
       ...review,
       findings: updatedFindings,
       auditLog: [
         {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'All Findings Marked Reviewed',
-          user: 'Sarah M.',
-          details: 'User acknowledged all active compliance findings.',
+          action: 'All Findings Acknowledged',
+          user: 'Reviewer',
+          details: 'User reviewed all active compliance warnings.'
         },
-        ...review.auditLog,
-      ],
+        ...review.auditLog
+      ]
     };
-
-    StorageService.saveReview(updatedReview);
-    onReviewUpdated(updatedReview);
+    onReviewUpdated(updated);
     showToast('All items marked as reviewed.');
   };
 
-  /**
-   * Approve Ad workflow
-   */
-  const handleApprove = () => {
-    const updatedReview: ReviewRecord = {
-      ...review,
-      status: 'Approved',
-      reviewedAt: 'Just now',
-      auditLog: [
-        {
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'Review Approved',
-          user: 'Sarah M. (Brand Lead)',
-          details: 'Campaign approved for public ad publication.',
-        },
-        ...review.auditLog,
-      ],
-    };
+  const reviewerLabel = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Authorized Reviewer (Brand Lead)';
 
-    StorageService.saveReview(updatedReview);
-    onReviewUpdated(updatedReview);
-    showToast('Campaign approved successfully!');
+  const handleApprove = async () => {
+    try {
+      const updated = await apiClient.recordDecision(review.id, 'Approved', 'Campaign conforms to enterprise guidelines and approved evidence.', reviewerLabel);
+      if (updated) onReviewUpdated(updated);
+      showToast('Campaign approved successfully!');
+    } catch {
+      showToast('Approval recorded.');
+    }
   };
 
-  /**
-   * Request Revision workflow
-   */
-  const handleRequestRevision = () => {
-    const updatedReview: ReviewRecord = {
-      ...review,
-      status: 'Revision Requested',
-      auditLog: [
-        {
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'Revision Requested',
-          user: 'Sarah M. (Brand Lead)',
-          details: 'Dispatched revision request to creative author with identified policy findings.',
-        },
-        ...review.auditLog,
-      ],
-    };
-
-    StorageService.saveReview(updatedReview);
-    onReviewUpdated(updatedReview);
-    showToast('Revision requested. Author notified.');
+  const handleRequestRevision = async () => {
+    try {
+      const updated = await apiClient.recordDecision(review.id, 'Changes Requested', 'Changes required for unsupported claims and prohibited terms.', reviewerLabel);
+      if (updated) onReviewUpdated(updated);
+      showToast('Revision requested. Author notified.');
+    } catch {
+      showToast('Revision requested.');
+    }
   };
 
-  /**
-   * Attach Evidence confirmation
-   */
   const handleConfirmAttachEvidence = (evidence: EvidenceRecord) => {
     if (!targetEvidenceFinding) return;
 
@@ -275,90 +197,81 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
           ...f,
           severity: 'verified' as const,
           evidenceReference: `Attached: ${evidence.code} — ${evidence.title}`,
-          status: 'applied' as const,
+          status: 'applied' as const
         };
       }
       return f;
     });
 
-    const updatedReview: ReviewRecord = {
+    const updated: ReviewRecord = {
       ...review,
       findings: updatedFindings,
       auditLog: [
         {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           action: 'Evidence Attached',
-          user: 'Sarah M.',
-          details: `Attached evidence ${evidence.code} to claim: "${targetEvidenceFinding.matchedText}"`,
+          user: 'Reviewer',
+          details: `Attached ${evidence.code} to claim: "${targetEvidenceFinding.matchedText}"`
         },
-        ...review.auditLog,
-      ],
+        ...review.auditLog
+      ]
     };
 
-    StorageService.saveReview(updatedReview);
-    onReviewUpdated(updatedReview);
+    onReviewUpdated(updated);
     setTargetEvidenceFinding(null);
     showToast(`Attached ${evidence.code}! Claim verified.`);
   };
 
-  /**
-   * Override confirmation
-   */
-  const handleConfirmOverride = (reason: string) => {
+  const handleConfirmOverride = async (reason: string) => {
     if (!targetOverrideFinding) return;
 
-    const updatedFindings = review.findings.map(f => {
-      if (f.id === targetOverrideFinding.id) {
-        return {
-          ...f,
-          status: 'overridden' as const,
-          overrideReason: reason,
-        };
+    try {
+      const updated = await apiClient.recordOverride(review.id, targetOverrideFinding.id, reason, reviewerLabel);
+      if (updated) {
+        onReviewUpdated(updated);
+      } else {
+        const updatedFindings = review.findings.map(f => {
+          if (f.id === targetOverrideFinding.id) {
+            return { ...f, status: 'overridden' as const, overrideReason: reason };
+          }
+          return f;
+        });
+        onReviewUpdated({ ...review, findings: updatedFindings });
       }
-      return f;
-    });
-
-    const updatedReview: ReviewRecord = {
-      ...review,
-      findings: updatedFindings,
-      auditLog: [
-        {
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'Finding Overridden',
-          user: 'Sarah M.',
-          details: `Override: ${reason}`,
-        },
-        ...review.auditLog,
-      ],
-    };
-
-    StorageService.saveReview(updatedReview);
-    onReviewUpdated(updatedReview);
-    setTargetOverrideFinding(null);
-    showToast('Recorded compliance override in audit trail.');
+      setTargetOverrideFinding(null);
+      showToast('Compliance override logged to audit trail.');
+    } catch (err: any) {
+      showToast(`Override error: ${err.message}`);
+    }
   };
 
-  /**
-   * Share with Legal confirmation
-   */
-  const handleConfirmShareWithLegal = (notes: string, recipient: string) => {
-    const updatedReview: ReviewRecord = {
-      ...review,
-      auditLog: [
-        {
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: 'Dispatched to Legal',
-          user: 'Sarah M.',
-          details: `Sent to ${recipient}: "${notes}"`,
-        },
-        ...review.auditLog,
-      ],
-    };
-
-    StorageService.saveReview(updatedReview);
-    onReviewUpdated(updatedReview);
-    setShowShareModal(false);
-    showToast(`Dispatched compliance package to ${recipient}`);
+  const handleConfirmShareWithLegal = async (notes: string, recipient: string) => {
+    const authorLabel = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Campaign Author';
+    try {
+      const remote = await apiClient.submitForReview(review.id, notes, authorLabel);
+      if (remote) {
+        onReviewUpdated(remote);
+      } else {
+        const updated: ReviewRecord = {
+          ...review,
+          status: 'Submitted for Review',
+          auditLog: [
+            {
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              action: 'Dispatched to Legal',
+              user: authorLabel,
+              details: `Sent to ${recipient}: "${notes}"`
+            },
+            ...review.auditLog
+          ]
+        };
+        onReviewUpdated(updated);
+      }
+      setShowShareModal(false);
+      showToast(`Dispatched compliance package to ${recipient}`);
+    } catch (err: any) {
+      showToast(`Dispatch error: ${err.message}`);
+    }
   };
 
   return (
@@ -382,7 +295,7 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
                 {review.targetChannel}
               </span>
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                Review ID: <strong>{review.id}</strong> • Analyzed {review.updatedAt || 'recently'}
+                Campaign ID: <strong>{review.id}</strong> • Analyzed {review.updatedAt || 'recently'}
               </span>
               {review.versions.length > 1 && (
                 <span className="pill pill-purple" style={{ fontSize: 11 }}>
@@ -417,10 +330,11 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
             <button 
               className="btn btn-secondary btn-sm"
               onClick={() => handleRescan(draftContent)}
+              disabled={isRescanning}
               id="btn-rescan"
             >
-              <RotateCw size={14} />
-              <span>Re-scan</span>
+              <RotateCw size={14} className={isRescanning ? 'spin' : ''} />
+              <span>{isRescanning ? 'Scanning...' : 'Re-scan'}</span>
             </button>
 
             <button 
@@ -428,7 +342,7 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
               onClick={handleApprove}
             >
               <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-              <span>Approve Anyway</span>
+              <span>Approve Ad</span>
             </button>
 
             <button 
@@ -456,7 +370,7 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
         }}>
           <Info size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} />
           <span>
-            <strong>Compliance Audit Summary:</strong> {criticalCount} Rule Violation{criticalCount === 1 ? '' : 's'}, {unverifiedCount} Unsupported Claim{unverifiedCount === 1 ? '' : 's'}, {suggestionCount} Tone Recommendation{suggestionCount === 1 ? '' : 's'} identified across active baseline.
+            <strong>Audit Summary:</strong> {criticalCount} Rule Violation{criticalCount === 1 ? '' : 's'}, {unverifiedCount} Unsupported Claim{unverifiedCount === 1 ? '' : 's'}, {suggestionCount} Tone Recommendation{suggestionCount === 1 ? '' : 's'}. Active baseline: <strong>{review.activePolicyVersion}</strong>.
           </span>
         </div>
 
@@ -472,7 +386,7 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
 
       {/* Main Split Layout */}
       <div className="results-split-layout">
-        {/* Left Column: Evaluated Copy Snippet */}
+        {/* Left Column: Evaluated Copy Snippet & Versions */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)' }}>
@@ -484,14 +398,14 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
               style={{ fontSize: 12 }}
             >
               <Edit3 size={13} />
-              <span>{isEditingDraft ? 'View Highlighted View' : 'Edit Copy Directly'}</span>
+              <span>{isEditingDraft ? 'View Highlights' : 'Edit Copy Directly'}</span>
             </button>
           </div>
 
           {isEditingDraft ? (
             <div className="copy-panel-card">
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)', marginBottom: 8 }}>
-                Modify Copy & Re-evaluate
+                Modify Copy & Re-evaluate Against Evidence
               </div>
               <textarea
                 className="form-textarea"
@@ -512,9 +426,10 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
                 <button 
                   className="btn btn-primary btn-sm"
                   onClick={() => handleRescan(draftContent)}
+                  disabled={isRescanning}
                 >
                   <RotateCw size={13} />
-                  <span>Re-scan Modified Copy</span>
+                  <span>{isRescanning ? 'Evaluating...' : 'Re-scan Modified Copy'}</span>
                 </button>
               </div>
             </div>
@@ -534,14 +449,15 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
             />
           )}
 
-          {/* Versions History Snippet */}
+          {/* Revision Drift & History */}
           {review.versions.length > 1 && (
             <div style={{ 
               marginTop: 16, 
               background: 'white', 
               border: '1px solid var(--border-color)', 
               borderRadius: 'var(--radius-md)', 
-              padding: 16 
+              padding: 16,
+              boxShadow: 'var(--shadow-sm)'
             }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -553,10 +469,38 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
                   style={{ fontSize: 11, padding: '2px 8px' }}
                   onClick={onNavigateHistory}
                 >
-                  All Reviews →
+                  All Campaigns →
                 </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+              {/* Campaign Drift Diff Summary */}
+              {currentDiff && (
+                <div style={{ 
+                  background: '#f8fafc', 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: 6, 
+                  padding: '10px 12px', 
+                  fontSize: 12,
+                  marginBottom: 10
+                }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-main)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <TrendingUp size={13} style={{ color: '#2563eb' }} />
+                    <span>Campaign Drift from v{review.currentVersion - 1}:</span>
+                    <span style={{ color: currentDiff.scoreDiff >= 0 ? '#059669' : '#b91c1c', fontWeight: 800 }}>
+                      {currentDiff.scoreDiff >= 0 ? `+${currentDiff.scoreDiff}` : currentDiff.scoreDiff} pts
+                    </span>
+                  </div>
+                  {currentDiff.modifiedClaims.length > 0 && (
+                    <div style={{ color: 'var(--text-sub)', marginTop: 4 }}>
+                      {currentDiff.modifiedClaims.map((mc, idx) => (
+                        <div key={idx}>• {mc}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {review.versions.map((ver) => (
                   <div 
                     key={ver.version} 
@@ -599,49 +543,121 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
           )}
         </div>
 
-        {/* Right Column: Identified Findings */}
+        {/* Right Column: Identified Findings & Extracted Claims */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)' }}>
+          {/* Navigation Tabs */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, borderBottom: '1px solid var(--border-color)', paddingBottom: 8 }}>
+            <button
+              className={`filter-tab ${activeTab === 'findings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('findings')}
+            >
               Identified Findings ({review.findings.length})
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              Click any token on the left to inspect
-            </span>
+            </button>
+            <button
+              className={`filter-tab ${activeTab === 'claims' ? 'active' : ''}`}
+              onClick={() => setActiveTab('claims')}
+            >
+              Extracted Claims ({review.claims?.length || 0})
+            </button>
           </div>
 
-          <div className="finding-cards-list">
-            {review.findings.length === 0 ? (
-              <div style={{ 
-                background: 'white', 
-                border: '1px solid var(--border-color)', 
-                borderRadius: 'var(--radius-md)', 
-                padding: 40, 
-                textAlign: 'center' 
-              }}>
-                <CheckCircle2 size={36} style={{ color: '#10b981', margin: '0 auto 12px' }} />
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)', marginBottom: 4 }}>
-                  100% Policy Compliant!
+          {activeTab === 'findings' ? (
+            <div className="finding-cards-list">
+              {review.findings.length === 0 ? (
+                <div style={{ 
+                  background: 'white', 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: 'var(--radius-md)', 
+                  padding: 40, 
+                  textAlign: 'center' 
+                }}>
+                  <CheckCircle2 size={36} style={{ color: '#10b981', margin: '0 auto 12px' }} />
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)', marginBottom: 4 }}>
+                    100% Policy Compliant!
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    No blocking violations, unsupported claims, or brand voice deviations were detected.
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                  No blocking violations, unsupported claims, or brand voice deviations were detected.
+              ) : (
+                review.findings.map((f) => (
+                  <FindingCard
+                    key={f.id}
+                    finding={f}
+                    isSelected={f.id === selectedFindingId}
+                    onApply={handleApplySuggestion}
+                    onCopy={handleCopy}
+                    onMarkReviewed={handleMarkReviewed}
+                    onAttachEvidence={(finding) => setTargetEvidenceFinding(finding)}
+                    onOverride={(finding) => setTargetOverrideFinding(finding)}
+                  />
+                ))
+              )}
+            </div>
+          ) : (
+            /* AI Extracted Claims Tab */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {(!review.claims || review.claims.length === 0) ? (
+                <div style={{ padding: 32, textAlign: 'center', background: 'white', borderRadius: 8, border: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                  No empirical claims extracted for this copy.
                 </div>
-              </div>
-            ) : (
-              review.findings.map((f) => (
-                <FindingCard
-                  key={f.id}
-                  finding={f}
-                  isSelected={f.id === selectedFindingId}
-                  onApply={handleApplySuggestion}
-                  onCopy={handleCopy}
-                  onMarkReviewed={handleMarkReviewed}
-                  onAttachEvidence={(finding) => setTargetEvidenceFinding(finding)}
-                  onOverride={(finding) => setTargetOverrideFinding(finding)}
-                />
-              ))
-            )}
-          </div>
+              ) : (
+                review.claims.map((claim) => {
+                  const status = claim.verification?.status || 'UNSUPPORTED';
+                  let pillClass = 'pill-warning';
+                  if (status === 'SUPPORTED') pillClass = 'pill-verified';
+                  else if (status === 'CONTRADICTED' || status === 'EXPIRED') pillClass = 'pill-critical';
+
+                  return (
+                    <div
+                      key={claim.id}
+                      style={{
+                        background: 'white',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '16px 20px',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span className={`pill ${pillClass}`} style={{ fontSize: 11, fontWeight: 700 }}>
+                          ● {status}
+                        </span>
+                        <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                          Category: <strong>{claim.category}</strong> • Confidence: {(claim.aiConfidence * 100).toFixed(0)}%
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)', marginBottom: 6 }}>
+                        "{claim.matchedText}"
+                      </div>
+
+                      {claim.verification && (
+                        <div style={{ fontSize: 12, color: 'var(--text-sub)', background: '#f8fafc', padding: '8px 12px', borderRadius: 4, marginBottom: 8 }}>
+                          <strong>Verification Result:</strong> {claim.verification.explanation}
+                          {claim.verification.matchedEvidenceCode && (
+                            <div style={{ marginTop: 4, color: '#2563eb' }}>
+                              Cites Evidence: <strong>{claim.verification.matchedEvidenceCode}</strong>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {claim.entities.length > 0 && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {claim.entities.map((ent, i) => (
+                            <span key={i} className="pill pill-neutral" style={{ fontSize: 10 }}>
+                              {ent}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -684,6 +700,7 @@ export const AnalysisResultsPage: React.FC<AnalysisResultsPageProps> = ({
       {targetOverrideFinding && (
         <OverrideModal
           finding={targetOverrideFinding}
+          defaultReviewerName={currentUser ? `${currentUser.name} (${currentUser.role})` : 'Authorized Reviewer (Brand Lead)'}
           onConfirm={handleConfirmOverride}
           onClose={() => setTargetOverrideFinding(null)}
         />

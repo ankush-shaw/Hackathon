@@ -36,7 +36,7 @@ export const FindingCard: React.FC<FindingCardProps> = ({
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = () => {
-    onCopy(finding.suggestedAlternative);
+    onCopy(finding.suggestedAlternative || '');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

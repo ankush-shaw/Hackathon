@@ -3,15 +3,36 @@ export type RuleCategory =
   | 'trademark'
   | 'evidence_required'
   | 'tone_sla'
-  | 'disclaimer';
+  | 'disclaimer'
+  | 'visual'
+  | 'accessibility';
 
 export type Severity = 'critical' | 'warning' | 'suggestion' | 'verified';
 
+export type VerificationStatus = 
+  | 'SUPPORTED'
+  | 'UNSUPPORTED'
+  | 'CONTRADICTED'
+  | 'EXPIRED'
+  | 'UNCERTAIN';
+
+export type ReviewStatus = 
+  | 'Draft'
+  | 'Submitted for Review'
+  | 'In Review'
+  | 'Action Required'
+  | 'Needs Evidence'
+  | 'Revision Requested'
+  | 'Approved'
+  | 'Rejected';
+
 export interface UserProfile {
+  id?: string;
   name: string;
   email: string;
   company: string;
   role: string;
+  avatarUrl?: string;
 }
 
 export interface BrandRule {
@@ -24,12 +45,22 @@ export interface BrandRule {
   description: string;
   matchPattern: string;
   isRegex: boolean;
-  clarificationNote: string;
-  suggestedReplacement: string;
+  clarificationNote?: string;
+  suggestedReplacement?: string;
   evidenceRequired: boolean;
   requiredEvidenceCategory?: string;
-  applicableChannels?: string[]; // If empty, applies to all
+  applicableChannels?: string[];
   isActive: boolean;
+  createdAt?: string;
+}
+
+export interface GuidelineVersion {
+  id: string;
+  versionNumber: number;
+  versionTag: string;
+  description?: string;
+  rulesSnapshot: BrandRule[];
+  createdAt: string;
 }
 
 export interface EvidenceRecord {
@@ -39,9 +70,38 @@ export interface EvidenceRecord {
   claimOrFact: string;
   sourceReference: string;
   category: string;
-  verificationStatus: 'verified' | 'unverified' | 'disputed';
-  notes: string;
-  dateAdded: string;
+  verificationStatus: 'verified' | 'unverified' | 'disputed' | 'expired';
+  notes?: string;
+  validFrom: string;
+  expirationDate?: string | null;
+  dateAdded?: string;
+  documentFile?: string;
+  createdAt?: string;
+}
+
+export interface ClaimVerification {
+  claimId: string;
+  status: VerificationStatus;
+  matchedEvidenceId?: string;
+  matchedEvidenceCode?: string;
+  explanation: string;
+  supportingExcerpt?: string;
+  missingInformation?: string;
+  verifiedAt: string;
+}
+
+export interface ExtractedClaim {
+  id: string;
+  claimText: string;
+  matchedText: string;
+  category: 'performance' | 'comparative' | 'guarantee' | 'security' | 'pricing' | 'product_capability' | 'general';
+  startIndex: number;
+  endIndex: number;
+  requiresEvidence: boolean;
+  entities: string[];
+  aiConfidence: number;
+  explanation: string;
+  verification?: ClaimVerification;
 }
 
 export interface Finding {
@@ -58,21 +118,21 @@ export interface Finding {
   issue: string;
   clarificationNote?: string;
   evidenceReference?: string;
-  suggestedAlternative: string;
+  suggestedAlternative?: string;
   actionLabel?: string;
   status: 'pending' | 'reviewed' | 'applied' | 'overridden';
   overrideReason?: string;
   attachedEvidenceId?: string;
 }
 
-export type ReviewStatus = 
-  | 'Draft'
-  | 'Scanned'
-  | 'Action Required'
-  | 'Approved'
-  | 'Needs Evidence'
-  | 'Rejected'
-  | 'Revision Requested';
+export interface RevisionDiff {
+  addedWords: string[];
+  removedWords: string[];
+  modifiedClaims: string[];
+  scoreDiff: number;
+  previousScore: number;
+  newScore: number;
+}
 
 export interface ReviewVersion {
   version: number;
@@ -80,13 +140,17 @@ export interface ReviewVersion {
   timestamp: string;
   score: number;
   findings: Finding[];
+  claims?: ExtractedClaim[];
+  diff?: RevisionDiff;
 }
 
 export interface AuditLogEntry {
+  id?: string;
   timestamp: string;
   action: string;
   user: string;
   details: string;
+  diffPayload?: any;
 }
 
 export interface ReviewRecord {
@@ -99,6 +163,7 @@ export interface ReviewRecord {
   status: ReviewStatus;
   brandHealthScore: number;
   findings: Finding[];
+  claims?: ExtractedClaim[];
   versions: ReviewVersion[];
   currentVersion: number;
   createdAt: string;
@@ -113,11 +178,44 @@ export interface ComplianceScanResult {
   score: number;
   status: ReviewStatus;
   findings: Finding[];
+  claims?: ExtractedClaim[];
   summaryText: string;
   stats: {
     criticalCount: number;
     unverifiedCount: number;
     suggestionCount: number;
     verifiedCount: number;
+    totalClaims?: number;
+    supportedClaims?: number;
+    unsupportedClaims?: number;
+    contradictedClaims?: number;
+    expiredClaims?: number;
+    uncertainClaims?: number;
   };
+}
+
+export interface BrandAsset {
+  id: string;
+  assetName: string;
+  assetType: 'logo' | 'color' | 'font' | 'guideline_document';
+  fileUrl?: string;
+  colorHex?: string;
+  colorRole?: string;
+  fontFamily?: string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+}
+
+export interface DashboardMetrics {
+  totalCampaigns: number;
+  claimsFlagged: number;
+  pendingApprovals: number;
+  passRate: number;
+  supportedClaimsCount: number;
+  unsupportedClaimsCount: number;
+  contradictedClaimsCount: number;
+  expiredEvidenceCount: number;
+  activeRulesCount: number;
+  totalEvidenceCount: number;
+  recentAuditLogs: AuditLogEntry[];
 }

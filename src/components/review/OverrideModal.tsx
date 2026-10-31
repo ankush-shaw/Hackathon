@@ -4,17 +4,19 @@ import { X, EyeOff, AlertTriangle } from 'lucide-react';
 
 interface OverrideModalProps {
   finding: Finding;
+  defaultReviewerName?: string;
   onConfirm: (reason: string) => void;
   onClose: () => void;
 }
 
 export const OverrideModal: React.FC<OverrideModalProps> = ({
   finding,
+  defaultReviewerName = 'Authorized Reviewer (Brand Lead)',
   onConfirm,
   onClose,
 }) => {
   const [reason, setReason] = useState('');
-  const [reviewerName, setReviewerName] = useState('Sarah M. (Marketing Lead)');
+  const [reviewerName, setReviewerName] = useState(defaultReviewerName);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

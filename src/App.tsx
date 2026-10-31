@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Topbar } from './components/layout/Topbar';
 import { DashboardPage } from './pages/DashboardPage';
@@ -9,6 +9,7 @@ import { BrandGuidelinesPage } from './pages/BrandGuidelinesPage';
 import { EvidenceLibraryPage } from './pages/EvidenceLibraryPage';
 import { LoginPage } from './pages/LoginPage';
 import { StorageService } from './storage/localStorage';
+import { apiClient } from './api/client';
 import type { ReviewRecord, BrandRule, EvidenceRecord, UserProfile } from './types';
 import { FileText } from 'lucide-react';
 import './App.css';
@@ -25,11 +26,27 @@ export function App() {
   const [evidenceList, setEvidenceList] = useState<EvidenceRecord[]>(() => StorageService.getEvidence());
   const [searchQuery, setSearchQuery] = useState('');
 
-  const refreshData = () => {
-    setReviews(StorageService.getReviews());
-    setRules(StorageService.getRules());
-    setEvidenceList(StorageService.getEvidence());
-  };
+  const refreshData = useCallback(async () => {
+    try {
+      const [fetchedCampaigns, fetchedRules, fetchedEvidence] = await Promise.all([
+        apiClient.getCampaigns(),
+        apiClient.getGuidelines(),
+        apiClient.getEvidence()
+      ]);
+      setReviews(fetchedCampaigns);
+      setRules(fetchedRules);
+      setEvidenceList(fetchedEvidence);
+    } catch {
+      setReviews(StorageService.getReviews());
+      setRules(StorageService.getRules());
+      setEvidenceList(StorageService.getEvidence());
+    }
+  }, []);
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
+    void refreshData();
+  }, [refreshData]);
 
   const handleLogin = (user: UserProfile) => {
     StorageService.saveUserSession(user);
@@ -43,9 +60,9 @@ export function App() {
     setCurrentUser(null);
   };
 
-  const handleDeleteReview = (reviewId: string) => {
+  const handleDeleteReview = async (reviewId: string) => {
     if (window.confirm(`Delete review record ${reviewId}?`)) {
-      StorageService.deleteReview(reviewId);
+      await apiClient.deleteCampaign(reviewId);
       refreshData();
     }
   };
@@ -83,18 +100,18 @@ export function App() {
     setReviews(prev => prev.map(r => (r.id === updatedReview.id ? updatedReview : r)));
   };
 
-  const handleToggleRule = (ruleId: string) => {
-    StorageService.toggleRuleActive(ruleId);
+  const handleToggleRule = async (ruleId: string) => {
+    await apiClient.toggleGuideline(ruleId);
     refreshData();
   };
 
-  const handleAddRule = (newRule: BrandRule) => {
-    StorageService.addRule(newRule);
+  const handleAddRule = async (newRule: BrandRule) => {
+    await apiClient.addGuideline(newRule);
     refreshData();
   };
 
-  const handleAddEvidence = (newRecord: EvidenceRecord) => {
-    StorageService.addEvidence(newRecord);
+  const handleAddEvidence = async (newRecord: EvidenceRecord) => {
+    await apiClient.addEvidence(newRecord);
     refreshData();
   };
 
@@ -194,6 +211,7 @@ export function App() {
                 review={activeReview}
                 rules={rules}
                 evidenceList={evidenceList}
+                currentUser={currentUser}
                 onReviewUpdated={handleReviewUpdated}
                 onNavigateHistory={() => setCurrentTab('history')}
               />

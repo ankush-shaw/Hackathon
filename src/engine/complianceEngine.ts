@@ -8,7 +8,7 @@ export function runComplianceScan(
 ): ComplianceScanResult {
   if (!text || text.trim().length === 0) {
     return {
-      score: 100,
+      score: 0,
       status: 'Draft',
       findings: [],
       summaryText: 'No marketing content provided for compliance scanning.',

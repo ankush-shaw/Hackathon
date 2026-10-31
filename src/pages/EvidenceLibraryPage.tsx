@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import type { EvidenceRecord } from '../types';
+import { apiClient } from '../api/client';
 import { 
   Plus, 
   X, 
-  Search
+  Search, 
+  Upload, 
+  FileText
 } from 'lucide-react';
+
+const TODAY_DATE_STR = new Date().toISOString().split('T')[0];
 
 interface EvidenceLibraryPageProps {
   evidenceList: EvidenceRecord[];
@@ -17,6 +22,9 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
 
   // New Evidence Form State
   const [newCode, setNewCode] = useState('');
@@ -24,8 +32,10 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
   const [newClaim, setNewClaim] = useState('');
   const [newSource, setNewSource] = useState('');
   const [newCategory, setNewCategory] = useState('Comparative Benchmark');
-  const [newStatus, setNewStatus] = useState<'verified' | 'unverified' | 'disputed'>('verified');
+  const [newStatus, setNewStatus] = useState<'verified' | 'unverified' | 'disputed' | 'expired'>('verified');
   const [newNotes, setNewNotes] = useState('');
+  const [newValidFrom, setNewValidFrom] = useState(TODAY_DATE_STR);
+  const [newExpiration, setNewExpiration] = useState('');
 
   const filteredEvidence = evidenceList.filter((e) => {
     if (searchQuery.trim()) {
@@ -53,7 +63,9 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
       category: newCategory,
       verificationStatus: newStatus,
       notes: newNotes.trim() || 'Added via Evidence Library Manager.',
-      dateAdded: new Date().toISOString().split('T')[0],
+      validFrom: newValidFrom,
+      expirationDate: newExpiration.trim() ? newExpiration.trim() : null,
+      createdAt: new Date().toISOString()
     };
 
     onAddEvidence(record);
@@ -64,6 +76,33 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
     setNewClaim('');
     setNewSource('');
     setNewNotes('');
+    setNewExpiration('');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadLoading(true);
+    setUploadMessage(null);
+
+    try {
+      const res = await apiClient.uploadEvidenceDocument(file);
+      if (res && res.extractedRecord) {
+        onAddEvidence(res.extractedRecord);
+        setUploadMessage(`Successfully ingested "${file.name}"! Document added as ${res.extractedRecord.code} (Pending Approval).`);
+      } else {
+        setUploadMessage('Document processed.');
+      }
+      setTimeout(() => {
+        setShowUploadModal(false);
+        setUploadLoading(false);
+        setUploadMessage(null);
+      }, 2000);
+    } catch (err: any) {
+      setUploadMessage(`Error parsing document: ${err.message}`);
+      setUploadLoading(false);
+    }
   };
 
   return (
@@ -74,18 +113,32 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <h1 className="page-title" style={{ margin: 0 }}>Approved Facts & Evidence Library</h1>
             <span className="pill pill-purple" style={{ fontSize: 11 }}>
-              14 Whitepapers Indexed
+              {evidenceList.length} Records Indexed
             </span>
           </div>
           <div className="page-subtitle" style={{ marginBottom: 0 }}>
-            Central repository of validated product specifications, third-party benchmarks, SLAs, and trademark catalog entries.
+            Central repository of validated product specifications, third-party benchmarks, SLAs, and ingested whitepapers.
           </div>
         </div>
 
-        <button className="btn btn-primary" onClick={() => setShowAddModal(true)} id="btn-add-evidence">
-          <Plus size={15} />
-          <span>Add Evidence Record</span>
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setShowUploadModal(true)}
+            id="btn-upload-document"
+          >
+            <Upload size={14} />
+            <span>Upload Document (PDF / TXT)</span>
+          </button>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => setShowAddModal(true)} 
+            id="btn-add-evidence"
+          >
+            <Plus size={15} />
+            <span>Add Evidence Record</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -123,14 +176,16 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
         {filteredEvidence.map((record) => {
           let badgeClass = 'pill-verified';
           if (record.verificationStatus === 'unverified') badgeClass = 'pill-warning';
-          if (record.verificationStatus === 'disputed') badgeClass = 'pill-critical';
+          if (record.verificationStatus === 'disputed' || record.verificationStatus === 'expired') badgeClass = 'pill-critical';
+
+          const isExpired = record.verificationStatus === 'expired' || (record.expirationDate ? record.expirationDate < TODAY_DATE_STR : false);
 
           return (
             <div
               key={record.id}
               style={{
                 background: 'white',
-                border: '1px solid var(--border-color)',
+                border: isExpired ? '1px solid #fecaca' : '1px solid var(--border-color)',
                 borderRadius: 'var(--radius-md)',
                 padding: '18px 24px',
                 boxShadow: 'var(--shadow-sm)'
@@ -146,18 +201,23 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
                       {record.title}
                     </span>
                     <span className={`pill ${badgeClass}`} style={{ fontSize: 10, textTransform: 'capitalize' }}>
-                      ● {record.verificationStatus}
+                      ● {isExpired ? 'Expired' : record.verificationStatus}
                     </span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Category: <strong>{record.category}</strong> • Added {record.dateAdded}
+                    Category: <strong>{record.category}</strong> • Valid From: <strong>{record.validFrom || record.dateAdded || 'Active'}</strong>
+                    {record.expirationDate && (
+                      <span style={{ marginLeft: 8, color: isExpired ? '#b91c1c' : 'inherit' }}>
+                        • Expiration: <strong>{record.expirationDate}</strong>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Substantiated claim or fact */}
               <div style={{ 
-                background: '#f8fafc', 
+                background: isExpired ? '#fff5f5' : '#f8fafc', 
                 padding: '12px 16px', 
                 borderRadius: 'var(--radius-sm)', 
                 border: '1px solid var(--border-color)',
@@ -175,7 +235,7 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
                   <strong>Source Reference:</strong> {record.sourceReference}
                 </div>
                 <div>
-                  <strong>Legal / Brand Notes:</strong> {record.notes}
+                  <strong>Legal / Brand Notes:</strong> {record.notes || 'Documented in compliance repository.'}
                 </div>
               </div>
             </div>
@@ -183,15 +243,80 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
         })}
       </div>
 
-      {/* Add Evidence Modal */}
+      {/* Upload Document Modal */}
+      {showUploadModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: 540 }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Upload size={18} style={{ color: 'var(--primary)' }} />
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)' }}>
+                  Ingest Whitepaper / SLA Document
+                </div>
+              </div>
+              <button className="btn btn-ghost" onClick={() => setShowUploadModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-sub)', marginBottom: 16 }}>
+                Upload an official PDF benchmark, Gartner/IDC whitepaper, or contractual SLA text document.
+                BrandGuard AI will parse the document text and extract validated claims for campaign verification.
+              </p>
+
+              {uploadMessage && (
+                <div style={{ 
+                  padding: '10px 14px', 
+                  background: uploadMessage.includes('Error') ? '#fef2f2' : '#f0fdf4',
+                  border: uploadMessage.includes('Error') ? '1px solid #fecaca' : '1px solid #bbf7d0',
+                  borderRadius: 6,
+                  color: uploadMessage.includes('Error') ? '#b91c1c' : '#047857',
+                  fontSize: 13,
+                  marginBottom: 16
+                }}>
+                  {uploadMessage}
+                </div>
+              )}
+
+              <label className="dropzone-box" style={{ padding: '36px 20px', cursor: 'pointer' }}>
+                <input
+                  type="file"
+                  accept=".pdf,.txt"
+                  style={{ display: 'none' }}
+                  onChange={handleFileUpload}
+                  disabled={uploadLoading}
+                />
+                <div className="dropzone-icon">
+                  <FileText size={24} />
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-main)', marginBottom: 4 }}>
+                  {uploadLoading ? 'Extracting text and parsing document...' : 'Click to select PDF or TXT file'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  Accepts PDF or plain text up to 25MB
+                </div>
+              </label>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowUploadModal(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Manual Evidence Modal */}
       {showAddModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: 600 }}>
             <div className="modal-header">
               <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)' }}>
-                Add Evidence / Whitepaper Record
+                Add Evidence Record
               </div>
-              <button className="btn btn-ghost" onClick={() => setShowAddModal(false)} style={{ padding: 4 }}>
+              <button className="btn btn-ghost" onClick={() => setShowAddModal(false)}>
                 <X size={18} />
               </button>
             </div>
@@ -222,6 +347,7 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
                       <option value="Product Nomenclature">Product Nomenclature</option>
                       <option value="Security & Compliance">Security & Compliance</option>
                       <option value="Performance Benchmark">Performance Benchmark</option>
+                      <option value="Technical Whitepaper">Technical Whitepaper</option>
                     </select>
                   </div>
                 </div>
@@ -251,28 +377,63 @@ export const EvidenceLibraryPage: React.FC<EvidenceLibraryPageProps> = ({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Source Document Reference</label>
+                  <label className="form-label">Source Reference</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Published Report #TR-9901, Appendix 2"
+                    placeholder="e.g. Master Service Agreement v2.4, Appendix D"
                     value={newSource}
                     onChange={(e) => setNewSource(e.target.value)}
                     required
                   />
                 </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Status</label>
+                    <select
+                      className="form-select"
+                      value={newStatus}
+                      onChange={(e) => setNewStatus(e.target.value as any)}
+                    >
+                      <option value="verified">Verified (Active)</option>
+                      <option value="unverified">Unverified (Pending)</option>
+                      <option value="expired">Expired</option>
+                      <option value="disputed">Disputed</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Valid From</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={newValidFrom}
+                      onChange={(e) => setNewValidFrom(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Expiration Date</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={newExpiration}
+                      onChange={(e) => setNewExpiration(e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Verification Status</label>
-                  <select
-                    className="form-select"
-                    value={newStatus}
-                    onChange={(e) => setNewStatus(e.target.value as any)}
-                  >
-                    <option value="verified">Verified & Approved</option>
-                    <option value="unverified">Unverified / Missing Citation</option>
-                    <option value="disputed">Disputed / Outdated</option>
-                  </select>
+                  <label className="form-label">Legal / Compliance Notes</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Valid for all enterprise ad variants through Q4 2026."
+                    value={newNotes}
+                    onChange={(e) => setNewNotes(e.target.value)}
+                  />
                 </div>
               </div>
 

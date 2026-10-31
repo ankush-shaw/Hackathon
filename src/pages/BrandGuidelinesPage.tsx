@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import type { BrandRule, RuleCategory, Severity } from '../types';
+import React, { useState, useEffect } from 'react';
+import type { BrandRule, RuleCategory, Severity, GuidelineVersion } from '../types';
+import { apiClient } from '../api/client';
 import { 
   ShieldCheck, 
   Plus, 
   X, 
   ToggleLeft, 
-  ToggleRight
+  ToggleRight,
+  GitBranch
 } from 'lucide-react';
 
 interface BrandGuidelinesPageProps {
@@ -21,6 +23,10 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  const [versions, setVersions] = useState<GuidelineVersion[]>([]);
+  const [newVersionTag, setNewVersionTag] = useState('v2.5');
+  const [newVersionDesc, setNewVersionDesc] = useState('Updated regulatory baseline standards');
 
   // New Rule Form State
   const [newTitle, setNewTitle] = useState('');
@@ -32,12 +38,18 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
   const [newClarification, setNewClarification] = useState('');
   const [newReplacement, setNewReplacement] = useState('');
 
+  useEffect(() => {
+    apiClient.getGuidelineVersions().then(v => {
+      if (v) setVersions(v);
+    });
+  }, []);
+
   const filteredRules = rules.filter(r => {
     if (activeCategory === 'all') return true;
     return r.category === activeCategory;
   });
 
-  const handleCreateRule = (e: React.FormEvent) => {
+  const handleCreateRule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newPattern.trim()) return;
 
@@ -61,6 +73,7 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
       isActive: true,
     };
 
+    await apiClient.addGuideline(createdRule);
     onAddRule(createdRule);
     setShowAddModal(false);
     // Reset form
@@ -72,6 +85,17 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
     setNewReplacement('');
   };
 
+  const handleCreateVersion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVersionTag.trim()) return;
+
+    const created = await apiClient.createGuidelineVersion(newVersionTag.trim(), newVersionDesc.trim());
+    if (created) {
+      setVersions([created, ...versions]);
+      setShowVersionModal(false);
+    }
+  };
+
   return (
     <div className="page-container">
       {/* Title */}
@@ -80,7 +104,7 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <h1 className="page-title" style={{ margin: 0 }}>Brand Guidelines & Governance Rules</h1>
             <span className="pill pill-verified" style={{ fontSize: 11 }}>
-              v2.4 Enforced
+              {versions[0]?.versionTag || 'v2.4'} Enforced
             </span>
           </div>
           <div className="page-subtitle" style={{ marginBottom: 0 }}>
@@ -88,10 +112,16 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
           </div>
         </div>
 
-        <button className="btn btn-primary" onClick={() => setShowAddModal(true)} id="btn-add-rule">
-          <Plus size={15} />
-          <span>Add Custom Rule</span>
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-secondary" onClick={() => setShowVersionModal(true)} id="btn-publish-version">
+            <GitBranch size={14} />
+            <span>Publish Baseline Version</span>
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowAddModal(true)} id="btn-add-rule">
+            <Plus size={15} />
+            <span>Add Custom Rule</span>
+          </button>
+        </div>
       </div>
 
       {/* Baseline Overview Banner */}
@@ -102,7 +132,7 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
           </div>
           <div>
             <div className="policy-title-row">
-              <span className="policy-title">Acme Global Baseline v2.4</span>
+              <span className="policy-title">Acme Global Baseline {versions[0]?.versionTag || 'v2.4'}</span>
               <span className="policy-enforced-tag">Active Baseline</span>
             </div>
             <div className="policy-subtext">
@@ -113,7 +143,7 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
 
         <div className="policy-right">
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            Last modified by Legal Review Board: Jan 2025
+            Baseline Releases: <strong>{versions.length} versions published</strong>
           </span>
         </div>
       </div>
@@ -136,7 +166,7 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
           className={`filter-tab ${activeCategory === 'evidence_required' ? 'active' : ''}`}
           onClick={() => setActiveCategory('evidence_required')}
         >
-          Comparative & Superlative Claims
+          Comparative & Superlatives
         </button>
         <button
           className={`filter-tab ${activeCategory === 'trademark' ? 'active' : ''}`}
@@ -236,6 +266,62 @@ export const BrandGuidelinesPage: React.FC<BrandGuidelinesPageProps> = ({
           );
         })}
       </div>
+
+      {/* Version History Modal */}
+      {showVersionModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: 540 }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <GitBranch size={18} style={{ color: 'var(--primary)' }} />
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)' }}>
+                  Publish New Baseline Version
+                </div>
+              </div>
+              <button className="btn btn-ghost" onClick={() => setShowVersionModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateVersion}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Version Tag</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={newVersionTag}
+                    onChange={(e) => setNewVersionTag(e.target.value)}
+                    placeholder="e.g. v2.5"
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Release Notes & Regulatory Context</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={3}
+                    value={newVersionDesc}
+                    onChange={(e) => setNewVersionDesc(e.target.value)}
+                    placeholder="Describe changes in this policy baseline snapshot..."
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowVersionModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Publish Snapshot
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Custom Rule Modal */}
       {showAddModal && (

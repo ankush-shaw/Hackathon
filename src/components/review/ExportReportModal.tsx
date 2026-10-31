@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { ReviewRecord } from '../../types';
-import { Printer, X, FileText } from 'lucide-react';
+import { Printer, X, FileText, Download } from 'lucide-react';
 
 interface ExportReportModalProps {
   review: ReviewRecord;
@@ -12,6 +12,16 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ review, on
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadJson = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(review, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `BrandGuard-Audit-${review.id}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
   };
 
   return (
@@ -151,6 +161,10 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ review, on
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>
             Close
+          </button>
+          <button className="btn btn-secondary" onClick={handleDownloadJson} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Download size={14} />
+            <span>Download Audit (JSON)</span>
           </button>
           <button className="btn btn-primary" onClick={handlePrint}>
             <Printer size={15} />

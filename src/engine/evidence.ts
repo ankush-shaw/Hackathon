@@ -10,6 +10,8 @@ export const DEFAULT_EVIDENCE: EvidenceRecord[] = [
     category: 'SLA & Architecture',
     verificationStatus: 'verified',
     notes: 'Legal approved for enterprise cloud tier ad campaigns. Valid through Q4 2026.',
+    validFrom: '2025-01-01',
+    expirationDate: '2026-12-31',
     dateAdded: '2025-01-15',
   },
   {
@@ -21,6 +23,8 @@ export const DEFAULT_EVIDENCE: EvidenceRecord[] = [
     category: 'Product Nomenclature',
     verificationStatus: 'verified',
     notes: 'Registered USPTO trademark #98234112.',
+    validFrom: '2024-01-01',
+    expirationDate: '2028-01-01',
     dateAdded: '2024-11-20',
   },
   {
@@ -32,6 +36,8 @@ export const DEFAULT_EVIDENCE: EvidenceRecord[] = [
     category: 'Security & Compliance',
     verificationStatus: 'verified',
     notes: 'Permitted for B2B security claims when citing current calendar year.',
+    validFrom: '2024-12-01',
+    expirationDate: '2027-12-01',
     dateAdded: '2024-12-01',
   },
   {
@@ -43,6 +49,8 @@ export const DEFAULT_EVIDENCE: EvidenceRecord[] = [
     category: 'Comparative Benchmark',
     verificationStatus: 'unverified',
     notes: 'Missing evidence is not proof of falsehood, but regulatory and brand policy requires external citation before publication.',
+    validFrom: '2024-01-01',
+    expirationDate: null,
     dateAdded: '2025-01-10',
   },
   {
@@ -54,6 +62,21 @@ export const DEFAULT_EVIDENCE: EvidenceRecord[] = [
     category: 'Performance Benchmark',
     verificationStatus: 'verified',
     notes: 'Must include footnote: "Based on internal 1M ops/sec synthetic workload benchmark".',
+    validFrom: '2024-08-01',
+    expirationDate: '2026-08-01',
     dateAdded: '2024-08-12',
+  },
+  {
+    id: 'EVID-EXPIRED-2023',
+    code: 'BENCH-2023-EXPIRED',
+    title: '2023 Query Throughput Benchmark (Superseded)',
+    claimOrFact: 'Historical 2023 performance benchmark superseded by v2.4 cloud cluster release.',
+    sourceReference: 'Legacy Benchmark Suite Rev 2023',
+    category: 'Historical Benchmark',
+    verificationStatus: 'expired',
+    notes: 'Expired! Do not use for current campaign substantiations.',
+    validFrom: '2023-01-01',
+    expirationDate: '2024-01-01',
+    dateAdded: '2023-01-15',
   }
 ];
