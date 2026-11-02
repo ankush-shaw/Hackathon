@@ -329,7 +329,7 @@ Return a valid JSON object matching this schema:
   "suggestedAlternative": "Compliant replacement text"
 }`;
 
-    const candidateModels = [env.GEMINI_MODEL, 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite']
+    const candidateModels = [env.GEMINI_MODEL, 'gemini-flash-lite-latest', 'gemini-3.8-flash']
       .filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
 
     let parsed: any = null;
@@ -348,7 +348,7 @@ Return a valid JSON object matching this schema:
         });
 
         const timeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Gemini API timeout after 6000ms for ${modelName}`)), 6000)
+          setTimeout(() => reject(new Error(`Gemini API timeout after 15000ms for ${modelName}`)), 15000)
         );
 
         const response = await Promise.race([apiCall, timeout]);

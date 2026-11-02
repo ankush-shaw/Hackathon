@@ -161,7 +161,7 @@ Return a valid JSON object matching this schema:
   ]
 }`;
 
-    const candidateModels = [env.GEMINI_MODEL, 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite']
+    const candidateModels = [env.GEMINI_MODEL, 'gemini-flash-lite-latest', 'gemini-3.8-flash']
       .filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
 
     let parsedJson: any = null;
@@ -180,7 +180,7 @@ Return a valid JSON object matching this schema:
         });
 
         const timeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Gemini API timeout after 7000ms for ${modelName}`)), 7000)
+          setTimeout(() => reject(new Error(`Gemini API timeout after 15000ms for ${modelName}`)), 15000)
         );
 
         const response = await Promise.race([apiCall, timeout]);
@@ -208,9 +208,19 @@ Return a valid JSON object matching this schema:
 
     const validated = aiClaimSchema.safeParse(parsedJson);
 
-    if (!validated.success || validated.data.claims.length === 0) {
-      console.warn(`⚠️ [${successfulModel}] Empty or unparsed AI response; using resilient heuristic fallback.`);
+    if (!validated.success) {
+      console.warn(`⚠️ [${successfulModel}] Invalid AI response structure; using heuristic fallback.`);
       return heuristicExtractClaims(text);
+    }
+
+    if (validated.data.claims.length === 0) {
+      const heuristicFallback = heuristicExtractClaims(text);
+      if (heuristicFallback.length > 0) {
+        console.log(`ℹ️ [${successfulModel}] AI identified 0 claims, heuristic found ${heuristicFallback.length} benchmark patterns.`);
+        return heuristicFallback;
+      }
+      console.log(`✨ [${successfulModel}] Text analyzed cleanly: 0 empirical claims requiring evidence.`);
+      return [];
     }
 
     console.log(`✨ [${successfulModel}] Successfully extracted ${validated.data.claims.length} empirical claims.`);

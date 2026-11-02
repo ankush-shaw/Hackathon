@@ -1,5 +1,6 @@
 import { getGeminiClient, isGeminiConfigured } from './geminiClient.js';
 import { env } from '../config/env.js';
+import sharp from 'sharp';
 import type { 
   GeminiCreativeInsights, 
   CreativeFinding, 
@@ -80,10 +81,27 @@ Return a valid JSON object matching this schema:
   ]
 }`;
 
-    const candidateModels = [env.GEMINI_MODEL, 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite']
+    const candidateModels = [env.GEMINI_MODEL, 'gemini-flash-lite-latest', 'gemini-3.8-flash']
       .filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
 
-    console.log(`👁️ [Gemini Vision] Auditing creative image (${imageBuffer.length} bytes, ${mimeType})...`);
+    // Optimize payload: If image exceeds 1MB, resize & convert to quality JPEG for sub-second Vision API transmission
+    let visionBuffer = imageBuffer;
+    let visionMimeType = mimeType;
+
+    if (imageBuffer.length > 1024 * 1024) {
+      try {
+        visionBuffer = await sharp(imageBuffer)
+          .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        visionMimeType = 'image/jpeg';
+        console.log(`🖼️ [Gemini Vision] Optimized creative for vision transmission: ${(imageBuffer.length / 1024 / 1024).toFixed(1)}MB -> ${(visionBuffer.length / 1024).toFixed(0)}KB`);
+      } catch (err: any) {
+        console.warn('⚠️ [Gemini Vision] Image optimization fallback:', err?.message || err);
+      }
+    }
+
+    console.log(`👁️ [Gemini Vision] Auditing creative image (${visionBuffer.length} bytes, ${visionMimeType})...`);
 
     let lastError: any = null;
 
@@ -97,8 +115,8 @@ Return a valid JSON object matching this schema:
               parts: [
                 {
                   inlineData: {
-                    mimeType: mimeType as any,
-                    data: imageBuffer.toString('base64')
+                    mimeType: visionMimeType as any,
+                    data: visionBuffer.toString('base64')
                   }
                 },
                 {
@@ -113,9 +131,9 @@ Return a valid JSON object matching this schema:
           }
         });
 
-        // 6-second timeout circuit breaker
+        // 20-second timeout circuit breaker
         const timeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Gemini Vision API timeout after 6000ms on ${modelName}`)), 6000)
+          setTimeout(() => reject(new Error(`Gemini Vision API timeout after 20000ms on ${modelName}`)), 20000)
         );
 
         const response = await Promise.race([apiCall, timeout]);
